@@ -1,0 +1,55 @@
+/**
+ * 知识库 Copilot 全局视觉：与 Element Plus / Tailwind 协调的浅色 AI 界面
+ */
+:root {
+  --kb-page-bg: linear-gradient(165deg, #f4f7ff 0%, #f8fafc 45%, #eef2ff 100%);
+  --kb-surface: #ffffff;
+  --kb-surface-muted: rgba(255, 255, 255, 0.72);
+  --kb-border: rgba(99, 102, 241, 0.12);
+  --kb-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
+  --kb-shadow-lg: 0 12px 40px rgba(79, 70, 229, 0.08);
+  --kb-radius: 14px;
+  --kb-radius-sm: 10px;
+  --kb-accent: #4f46e5;
+  --kb-accent-soft: rgba(79, 70, 229, 0.08);
+  --kb-text: #0f172a;
+  --kb-text-secondary: #64748b;
+}
+
+html,
+body {
+  background: #f1f5f9;
+}
+
+/* 页面壳：知识库 / 模型 / 对话侧栏等 */
+.kb-page-shell {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.kb-page-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--kb-text);
+  letter-spacing: -0.02em;
+  margin: 0 0 16px;
+}
+
+.kb-card {
+  border-radius: var(--kb-radius) !important;
+  border: 1px solid var(--kb-border) !important;
+  box-shadow: var(--kb-shadow) !important;
+  background: var(--kb-surface) !important;
+  backdrop-filter: blur(8px);
+}
+
+.kb-card :deep(.el-card__header) {
+  border-bottom: 1px solid var(--kb-border);
+  font-weight: 600;
+  color: var(--kb-text);
+}
+
+.kb-table {
+  border-radius: var(--kb-radius-sm);
+  overflow: hidden;
+}
