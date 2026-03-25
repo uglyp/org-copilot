@@ -59,7 +59,7 @@ async def resolve_chat_model(
     return ResolvedOpenAICompat(
         api_base=p.api_base.rstrip("/"),
         api_key=api_key,
-        model_id=m.model_id,
+        model_id=(m.model_id or "").strip(),
         extra_headers=headers,
     )
 
@@ -95,6 +95,6 @@ async def _resolve_default(
     return ResolvedOpenAICompat(
         api_base=p.api_base.rstrip("/"),
         api_key=api_key,
-        model_id=m.model_id,
+        model_id=(m.model_id or "").strip(),
         extra_headers=headers,
     )

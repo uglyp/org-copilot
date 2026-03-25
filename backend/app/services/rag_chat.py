@@ -13,6 +13,7 @@ import json
 from collections.abc import AsyncIterator
 from typing import Any
 
+import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -168,9 +169,30 @@ async def stream_chat_reply(
     yield _sse({"type": "status", "phase": "generating"})
 
     full: list[str] = []
-    async for token in chat_completion_stream(chat_cfg, messages):
-        full.append(token)
-        yield _sse({"type": "token", "content": token})
+    try:
+        async for token in chat_completion_stream(chat_cfg, messages):
+            full.append(token)
+            yield _sse({"type": "token", "content": token})
+    except httpx.HTTPStatusError as e:
+        hint = ""
+        if e.response.status_code == 404 and "11434" in str(chat_cfg.api_base):
+            hint = "（请确认本机已启动 Ollama，且版本支持 OpenAI 兼容接口 /v1/chat/completions；API Base 填 http://127.0.0.1:11434 或 http://127.0.0.1:11434/v1 均可）"
+        body = ""
+        try:
+            body = (e.response.text or "")[:280]
+        except Exception:
+            pass
+        msg = f"对话 API HTTP {e.response.status_code}{f'：{body}' if body else ''}{hint}"
+        yield _sse({"type": "error", "code": msg[:900]})
+        return
+    except httpx.RequestError as e:
+        yield _sse(
+            {
+                "type": "error",
+                "code": f"无法连接对话服务（{chat_cfg.api_base}）：{e!s}"[:900],
+            }
+        )
+        return
 
     assistant_text = "".join(full)
     asst = Message(

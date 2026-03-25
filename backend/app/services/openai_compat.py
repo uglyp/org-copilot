@@ -16,6 +16,16 @@ from app.services.local_embed import embed_texts_local
 from app.services.model_resolver import ResolvedOpenAICompat
 
 
+def _openai_v1_base(api_base: str) -> str:
+    """统一为 `.../v1`，避免用户在模型设置里填 `http://host:11434/v1` 时再拼出 `/v1/v1/...` 导致 404。"""
+    b = (api_base or "").strip().rstrip("/")
+    if not b:
+        raise ValueError("api_base 为空")
+    if b.endswith("/v1"):
+        return b
+    return f"{b}/v1"
+
+
 async def embed_texts(
     cfg: ResolvedOpenAICompat | None, texts: list[str]
 ) -> list[list[float]]:
@@ -25,7 +35,7 @@ async def embed_texts(
         return await embed_texts_local(texts)
     if not cfg:
         raise ValueError("embedding 未配置：请设置 USE_LOCAL_EMBEDDING=true 或配置默认向量模型")
-    url = f"{cfg.api_base}/v1/embeddings"
+    url = f"{_openai_v1_base(cfg.api_base)}/embeddings"
     headers = {"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"}
     if cfg.extra_headers:
         headers.update(cfg.extra_headers)
@@ -44,7 +54,7 @@ async def chat_completion_stream(
     messages: list[dict[str, str]],
 ) -> AsyncIterator[str]:
     """流式：逐段 yield 文本 token（字符串）。"""
-    url = f"{cfg.api_base}/v1/chat/completions"
+    url = f"{_openai_v1_base(cfg.api_base)}/chat/completions"
     headers = {"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"}
     if cfg.extra_headers:
         headers.update(cfg.extra_headers)
@@ -78,14 +88,15 @@ async def chat_completion_stream(
 
 async def probe_chat(cfg: ResolvedOpenAICompat) -> None:
     """模型设置页「探测」：发极小请求验证 base_url 与 key 是否可用。"""
-    url = f"{cfg.api_base}/v1/chat/completions"
+    url = f"{_openai_v1_base(cfg.api_base)}/chat/completions"
     headers = {"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"}
     if cfg.extra_headers:
         headers.update(cfg.extra_headers)
-    payload = {
+    payload: dict[str, Any] = {
         "model": cfg.model_id,
-        "messages": [{"role": "user", "content": "ping"}],
-        "max_tokens": 5,
+        "messages": [{"role": "user", "content": "hi"}],
+        "max_tokens": 8,
+        "stream": False,
     }
     async with httpx.AsyncClient(timeout=60.0) as client:
         r = await client.post(url, headers=headers, json=payload)
@@ -94,7 +105,7 @@ async def probe_chat(cfg: ResolvedOpenAICompat) -> None:
 
 async def probe_embedding(cfg: ResolvedOpenAICompat) -> None:
     """同上，针对 embedding 端点。"""
-    url = f"{cfg.api_base}/v1/embeddings"
+    url = f"{_openai_v1_base(cfg.api_base)}/embeddings"
     headers = {"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"}
     if cfg.extra_headers:
         headers.update(cfg.extra_headers)

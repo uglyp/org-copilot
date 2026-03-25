@@ -2,7 +2,9 @@
 // OpenAI 兼容提供商：区分「远程 API」与「本地 Ollama」，chat / embedding 行编辑
 import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
+import axios from "axios";
 import { http } from "@/api/http";
+import { messageFromHttpBody } from "@/utils/chatError";
 import type { LLMModelRow, ProviderOut } from "@/api/types";
 import { useReadinessStore } from "@/stores/readiness";
 
@@ -94,7 +96,7 @@ function openCreateOllama() {
   providerKind.value = "ollama";
   Object.assign(form, {
     name: "Ollama",
-    api_base: "http://127.0.0.1:11434/v1",
+    api_base: "http://127.0.0.1:11434",
     api_key: "ollama",
     provider_type: "openai_compatible",
     models: defaultOllamaModels(),
@@ -181,6 +183,14 @@ async function save() {
   }
   if (!validateModels()) return;
 
+  const defChat = form.models.find((m) => m.purpose === "chat" && m.is_default);
+  if (defChat?.enabled && !(defChat.model_id || "").trim()) {
+    ElMessage.warning(
+      "请填写默认对话模型的 model_id（Ollama 须与终端执行 ollama list 中的模型名完全一致）"
+    );
+    return;
+  }
+
   if (!editingId.value) {
     if (providerKind.value === "remote" && !form.api_key?.trim()) {
       ElMessage.warning("远程 API 需填写 API Key");
@@ -224,8 +234,15 @@ async function probe(row: ProviderOut) {
   try {
     await http.post(`/me/providers/${row.id}/probe`);
     ElMessage.success("探测成功");
-  } catch {
-    ElMessage.error("探测失败，请检查模型与密钥");
+  } catch (e) {
+    let raw = e instanceof Error ? e.message : String(e);
+    if (axios.isAxiosError(e) && e.response?.data !== undefined) {
+      raw =
+        typeof e.response.data === "string"
+          ? e.response.data
+          : JSON.stringify(e.response.data);
+    }
+    ElMessage.error(messageFromHttpBody(raw));
   }
 }
 
@@ -309,7 +326,7 @@ onMounted(load);
         :closable="false"
         show-icon
         class="mb-3"
-        title="本地 Ollama 使用 OpenAI 兼容接口（/v1）。密钥可填 ollama；模型名需与 ollama list 中一致。"
+        title="本地 Ollama：API Base 填 http://127.0.0.1:11434 即可（后端会自动接 /v1）。密钥可填 ollama。务必填写 model_id，且与终端 ollama list 中的名称一致。"
       />
       <el-alert
         v-if="!isOllamaFlow && !editingId"
@@ -328,7 +345,9 @@ onMounted(load);
           <el-input
             v-model="form.api_base"
             :placeholder="
-              isOllamaFlow ? 'http://127.0.0.1:11434/v1' : 'https://api.openai.com/v1'
+              isOllamaFlow
+                ? 'http://127.0.0.1:11434（可加或不加 /v1）'
+                : 'https://api.openai.com/v1'
             "
           />
         </el-form-item>
@@ -369,7 +388,14 @@ onMounted(load);
         </el-table-column>
         <el-table-column label="model_id" min-width="160">
           <template #default="{ row }">
-            <el-input v-model="row.model_id" placeholder="如 gpt-4o-mini、llama3" />
+            <el-input
+              v-model="row.model_id"
+              :placeholder="
+                isOllamaFlow
+                  ? '必填：ollama list 中的名称，如 llama3.2'
+                  : '如 gpt-4o-mini、deepseek-chat'
+              "
+            />
           </template>
         </el-table-column>
         <el-table-column label="用途" width="130">

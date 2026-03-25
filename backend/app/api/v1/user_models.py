@@ -4,10 +4,13 @@
 `PATCH` 采用「删光子模型再重建」的简单策略，前端需提交完整模型列表。
 """
 
+from __future__ import annotations
+
 from typing import Any, Literal
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import and_, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,6 +41,21 @@ class ModelIn(BaseModel):
     purpose: str = Field(pattern="^(chat|embedding)$")
     is_default: bool = False
     enabled: bool = True
+
+    @field_validator("model_id", mode="before")
+    @classmethod
+    def strip_model_id(cls, v: object) -> str:
+        if v is None:
+            return ""
+        return str(v).strip()
+
+    @model_validator(mode="after")
+    def enabled_requires_model_id(self) -> ModelIn:
+        if self.enabled and not self.model_id:
+            raise ValueError(
+                "已启用的模型必须填写 model_id；本地 Ollama 须与命令 ollama list 中的模型名一致（如 llama3.2、qwen2.5）"
+            )
+        return self
 
 
 class ProviderCreate(BaseModel):
@@ -377,21 +395,61 @@ async def probe_provider(
             status.HTTP_400_BAD_REQUEST,
             detail="该提供商下需配置一个默认的对话（chat）模型后再探测",
         )
+    if not (chat_m.model_id or "").strip():
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="默认对话模型的 model_id 为空，请编辑该提供商，填写与 Ollama 一致的模型名后再探测",
+        )
     extra = p.extra_headers_json or {}
     headers = {str(k): str(v) for k, v in extra.items()} if extra else None
     chat_cfg = ResolvedOpenAICompat(
         api_base=p.api_base,
         api_key=api_key,
-        model_id=chat_m.model_id,
+        model_id=chat_m.model_id.strip(),
         extra_headers=headers,
     )
-    await probe_chat(chat_cfg)
-    if emb_m:
+    try:
+        await probe_chat(chat_cfg)
+    except httpx.HTTPStatusError as e:
+        body = ""
+        try:
+            body = (e.response.text or "")[:400]
+        except Exception:
+            pass
+        hint = ""
+        if e.response.status_code in (404, 502) and _is_local_provider(p):
+            hint = " 请确认本机已运行 ollama serve，且 API Base 为 http://127.0.0.1:11434 或 http://127.0.0.1:11434/v1；若在 Docker 内跑后端，需用宿主机地址而非 127.0.0.1。"
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            detail=f"对话探测失败：上游 HTTP {e.response.status_code}{(' — ' + body) if body else ''}.{hint}",
+        ) from e
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            detail=f"对话探测失败：无法连接 {p.api_base}（{e!s}）",
+        ) from e
+    if emb_m and (emb_m.model_id or "").strip():
         emb_cfg = ResolvedOpenAICompat(
             api_base=p.api_base,
             api_key=api_key,
-            model_id=emb_m.model_id,
+            model_id=emb_m.model_id.strip(),
             extra_headers=headers,
         )
-        await probe_embedding(emb_cfg)
+        try:
+            await probe_embedding(emb_cfg)
+        except httpx.HTTPStatusError as e:
+            body = ""
+            try:
+                body = (e.response.text or "")[:400]
+            except Exception:
+                pass
+            raise HTTPException(
+                status.HTTP_502_BAD_GATEWAY,
+                detail=f"向量探测失败：上游 HTTP {e.response.status_code}{(' — ' + body) if body else ''}",
+            ) from e
+        except httpx.RequestError as e:
+            raise HTTPException(
+                status.HTTP_502_BAD_GATEWAY,
+                detail=f"向量探测失败：无法连接 {p.api_base}（{e!s}）",
+            ) from e
     return {"status": "ok"}
