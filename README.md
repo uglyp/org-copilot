@@ -1,10 +1,10 @@
-# 知识库 Copilot（agent）
+# 知识库 Copilot（KB-Copilot）
 
-前后端实现见 PRD / 概设（`agent/docs/`）。本目录包含 **FastAPI 后端**与 **Vue 3 前端**。
+本仓库包含 **FastAPI 后端**与 **Vue 3 前端**。
 
-**本地开发（虚拟环境、依赖、启动 uvicorn、MySQL 迁移、Ollama 与本地模型）** 的完整说明见：**[`docs/LOCAL_DEV_AND_OLLAMA.md`](docs/LOCAL_DEV_AND_OLLAMA.md)**。下文为快速步骤；与长文档重复处以该文件为准。
+**本地开发（虚拟环境、依赖、启动 uvicorn、MySQL 迁移、Ollama 与本地模型）** 的完整说明见：**[`docs/LOCAL_DEV_AND_OLLAMA.md`](docs/LOCAL_DEV_AND_OLLAMA.md)**（若你通过 Git 克隆后没有 `docs/` 目录，说明该文档未纳入版本库，请使用本地备份或团队 Wiki 中的同名字稿）。下文为快速步骤；与长文档重复处以该文件为准。
 
-**后端架构、依赖分工、RAG 数据流与目录地图**：[`backend/docs/BACKEND_TUTORIAL.md`](backend/docs/BACKEND_TUTORIAL.md)（与上一文档互为补充：教程偏「理解与跟代码」，长手册偏「命令与排错」）。
+**后端架构、依赖分工、RAG 数据流与目录地图**：[`backend/docs/BACKEND_TUTORIAL.md`](backend/docs/BACKEND_TUTORIAL.md)（同上，若目录缺失请从备份获取；与上一文档互为补充：教程偏「理解与跟代码」，长手册偏「命令与排错」）。
 
 ## 后端（`backend/`）
 
@@ -69,7 +69,7 @@
 
 3. 若部署到静态服务器且无法配置代理，构建前设置 `VITE_API_BASE`（例如 `http://你的后端:8000/api/v1`）。
 
-4. **对话界面**使用 **[vue-element-plus-x](https://element-plus-x.com)**：`Conversations`（会话列表）、`Sender`（输入区）、`XMarkdown` / `Typewriter`（回答渲染）、`Thinking` / `ThoughtChain`（检索阶段反馈），对接本项目 SSE（`src/api/sse.ts`）；知识库与模型页与全局主题样式（`src/styles/kb-theme.css`）保持一致。
+4. **对话界面**使用 **[vue-element-plus-x](https://element-plus-x.com)**：`Conversations`（会话列表）、`Sender`（输入区）、`XMarkdown` / `Typewriter`（回答渲染）、`ThoughtChain`（检索阶段进度），对接本项目 SSE（`src/api/sse.ts`）；知识库与模型页与全局主题样式（`src/styles/kb-theme.css`）保持一致。
 
 ## 向量与知识库（RAG）
 
