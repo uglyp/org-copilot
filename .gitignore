@@ -30,6 +30,13 @@ frontend/dist/
 *.swp
 *.swo
 
-# Logs & data (keep structure; ignore runtime DB if any)
+# Logs & local runtime data (Qdrant, uploads — recreated at dev time)
 *.log
-backend/data/*.sqlite3
+backend/data/qdrant_local/
+backend/data/uploads/
+
+# TypeScript incremental (local)
+*.tsbuildinfo
+
+# Documentation: any directory named docs anywhere in the tree (never push)
+**/docs/
