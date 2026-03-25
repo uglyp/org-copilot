@@ -4,7 +4,7 @@
 `PATCH` 采用「删光子模型再重建」的简单策略，前端需提交完整模型列表。
 """
 
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -60,6 +60,30 @@ class ProviderOut(BaseModel):
         from_attributes = True
 
 
+def _is_local_provider(p: LLMProvider) -> bool:
+    """与前端「本地 Ollama」判断对齐：名称、常见本机地址与 Ollama 默认端口。"""
+    name = (p.name or "").strip().lower()
+    if name == "ollama":
+        return True
+    base = (p.api_base or "").lower()
+    if "localhost" in base or "127.0.0.1" in base:
+        return True
+    if ":11434" in base:
+        return True
+    return False
+
+
+def _chat_model_subtitle(m: LLMModel, p: LLMProvider, local: bool) -> str:
+    if local:
+        return "本地模型 · 需本机 Ollama 运行"
+    mid = (m.model_id or "").lower()
+    if "think" in mid or "reason" in mid or "reasoning" in mid:
+        return "增强推理能力（远程）"
+    if m.is_default:
+        return "默认对话 · 适合大部分任务"
+    return f"远程 API · {p.name}"
+
+
 class ChatModelOptionOut(BaseModel):
     """对话页可选模型：默认（如 DeepSeek）+ 其它已启用的 chat（如 Ollama）。"""
 
@@ -69,6 +93,8 @@ class ChatModelOptionOut(BaseModel):
     provider_id: int
     provider_name: str
     is_default: bool
+    provider_kind: Literal["local", "remote"]
+    subtitle: str
 
 
 @router.get("/chat-models", response_model=list[ChatModelOptionOut])
@@ -93,6 +119,7 @@ async def list_chat_models(
     r = await db.execute(q)
     out: list[ChatModelOptionOut] = []
     for m, p in r.all():
+        local = _is_local_provider(p)
         out.append(
             ChatModelOptionOut(
                 id=m.id,
@@ -101,6 +128,8 @@ async def list_chat_models(
                 provider_id=p.id,
                 provider_name=p.name,
                 is_default=m.is_default,
+                provider_kind="local" if local else "remote",
+                subtitle=_chat_model_subtitle(m, p, local),
             )
         )
     return out
@@ -346,7 +375,7 @@ async def probe_provider(
     if not chat_m:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            detail="Need default chat model on this provider",
+            detail="该提供商下需配置一个默认的对话（chat）模型后再探测",
         )
     extra = p.extra_headers_json or {}
     headers = {str(k): str(v) for k, v in extra.items()} if extra else None

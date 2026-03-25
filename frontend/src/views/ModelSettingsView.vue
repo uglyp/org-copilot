@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// OpenAI 兼容提供商与 chat/embedding 模型行编辑
-import { onMounted, reactive, ref } from "vue";
+// OpenAI 兼容提供商：区分「远程 API」与「本地 Ollama」，chat / embedding 行编辑
+import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { http } from "@/api/http";
 import type { LLMModelRow, ProviderOut } from "@/api/types";
@@ -12,6 +12,8 @@ const loading = ref(false);
 
 const dialogVisible = ref(false);
 const editingId = ref<number | null>(null);
+/** 新建时用；编辑时由当前行推导，不在表单内切换类型 */
+const providerKind = ref<"remote" | "ollama">("remote");
 
 const form = reactive({
   name: "",
@@ -21,7 +23,18 @@ const form = reactive({
   models: [] as LLMModelRow[],
 });
 
-function defaultModels(): LLMModelRow[] {
+function isLocalProvider(row: ProviderOut): boolean {
+  const n = row.name.trim().toLowerCase();
+  if (n === "ollama") return true;
+  const b = row.api_base.toLowerCase();
+  return (
+    b.includes("localhost") ||
+    b.includes("127.0.0.1") ||
+    b.includes(":11434")
+  );
+}
+
+function defaultRemoteModels(): LLMModelRow[] {
   return [
     {
       display_name: "Chat",
@@ -40,6 +53,18 @@ function defaultModels(): LLMModelRow[] {
   ];
 }
 
+function defaultOllamaModels(): LLMModelRow[] {
+  return [
+    {
+      display_name: "本地对话",
+      model_id: "",
+      purpose: "chat",
+      is_default: true,
+      enabled: true,
+    },
+  ];
+}
+
 async function load() {
   loading.value = true;
   try {
@@ -51,20 +76,35 @@ async function load() {
   }
 }
 
-function openCreate() {
+function openCreateRemote() {
   editingId.value = null;
+  providerKind.value = "remote";
   Object.assign(form, {
     name: "",
     api_base: "",
     api_key: "",
     provider_type: "openai_compatible",
-    models: defaultModels(),
+    models: defaultRemoteModels(),
+  });
+  dialogVisible.value = true;
+}
+
+function openCreateOllama() {
+  editingId.value = null;
+  providerKind.value = "ollama";
+  Object.assign(form, {
+    name: "Ollama",
+    api_base: "http://127.0.0.1:11434/v1",
+    api_key: "ollama",
+    provider_type: "openai_compatible",
+    models: defaultOllamaModels(),
   });
   dialogVisible.value = true;
 }
 
 function openEdit(row: ProviderOut) {
   editingId.value = row.id;
+  providerKind.value = isLocalProvider(row) ? "ollama" : "remote";
   form.name = row.name;
   form.api_base = row.api_base;
   form.api_key = "";
@@ -73,20 +113,87 @@ function openEdit(row: ProviderOut) {
   dialogVisible.value = true;
 }
 
+const dialogTitle = computed(() => {
+  if (editingId.value) {
+    return providerKind.value === "ollama" ? "编辑本地 Ollama" : "编辑远程提供商";
+  }
+  return providerKind.value === "ollama" ? "添加本地 Ollama" : "添加远程 API 提供商";
+});
+
+const isOllamaFlow = computed(() => providerKind.value === "ollama");
+
+function addChatRow() {
+  form.models.push({
+    display_name: `对话 ${form.models.filter((m) => m.purpose === "chat").length + 1}`,
+    model_id: "",
+    purpose: "chat",
+    is_default: false,
+    enabled: true,
+  });
+}
+
+function addEmbeddingRow() {
+  if (isOllamaFlow.value) return;
+  form.models.push({
+    display_name: "Embedding",
+    model_id: "",
+    purpose: "embedding",
+    is_default: false,
+    enabled: true,
+  });
+}
+
+function removeModelRow(index: number) {
+  form.models.splice(index, 1);
+}
+
+function onDefaultToggle(row: LLMModelRow, purpose: "chat" | "embedding", on: boolean) {
+  if (!on) return;
+  for (const m of form.models) {
+    if (m.purpose === purpose) m.is_default = m === row;
+  }
+}
+
+function validateModels(): boolean {
+  const chats = form.models.filter((m) => m.purpose === "chat");
+  const embs = form.models.filter((m) => m.purpose === "embedding");
+  const chatDef = chats.filter((m) => m.is_default);
+  const embDef = embs.filter((m) => m.is_default);
+  if (chats.length === 0) {
+    ElMessage.warning("至少配置一个对话（chat）模型");
+    return false;
+  }
+  if (chatDef.length !== 1) {
+    ElMessage.warning("对话模型需有且仅有一个默认");
+    return false;
+  }
+  if (embs.length > 0 && embDef.length !== 1) {
+    ElMessage.warning("若配置了向量（embedding）模型，需有且仅有一个默认");
+    return false;
+  }
+  return true;
+}
+
 async function save() {
-  if (!form.name || !form.api_base) {
+  if (!form.name?.trim() || !form.api_base?.trim()) {
     ElMessage.warning("请填写名称与 API Base");
     return;
   }
-  const chatDef = form.models.filter((m) => m.purpose === "chat" && m.is_default);
-  const embDef = form.models.filter((m) => m.purpose === "embedding" && m.is_default);
-  if (chatDef.length !== 1 || embDef.length !== 1) {
-    ElMessage.warning("每种用途需且仅能有一个默认模型");
-    return;
+  if (!validateModels()) return;
+
+  if (!editingId.value) {
+    if (providerKind.value === "remote" && !form.api_key?.trim()) {
+      ElMessage.warning("远程 API 需填写 API Key");
+      return;
+    }
+    if (providerKind.value === "ollama" && !form.api_key?.trim()) {
+      form.api_key = "ollama";
+    }
   }
+
   const payload = {
-    name: form.name,
-    api_base: form.api_base,
+    name: form.name.trim(),
+    api_base: form.api_base.trim(),
     api_key: form.api_key,
     provider_type: form.provider_type,
     models: form.models.map((m) => ({
@@ -100,10 +207,6 @@ async function save() {
   if (editingId.value) {
     await http.patch(`/me/providers/${editingId.value}`, payload);
   } else {
-    if (!form.api_key) {
-      ElMessage.warning("请填写 API Key");
-      return;
-    }
     await http.post("/me/providers", payload);
   }
   ElMessage.success("已保存");
@@ -136,8 +239,11 @@ onMounted(load);
     <div
       class="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 shadow-sm"
     >
-      <el-button type="primary" class="!rounded-lg" round @click="openCreate">
-        新增提供商
+      <el-button type="primary" class="!rounded-lg" round @click="openCreateRemote">
+        添加远程 API
+      </el-button>
+      <el-button class="!rounded-lg" round @click="openCreateOllama">
+        添加本地 Ollama
       </el-button>
       <el-tag v-if="readiness.chatReady === true" type="success" effect="plain" round>
         对话模型已就绪
@@ -159,80 +265,148 @@ onMounted(load);
       </el-tag>
     </div>
 
+    <p class="text-xs leading-relaxed text-muted-foreground">
+      <strong class="text-foreground">远程 API</strong>：同一提供商可同时配置对话与向量模型（用于知识库）。
+      <strong class="text-foreground">本地 Ollama</strong>：通常只需对话模型；向量可在环境变量中配置本地 fastembed 或其它远程 Embedding 提供商。
+    </p>
+
     <div class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-    <el-table
-      v-loading="loading"
-      :data="list"
-      stripe
-      class="kb-table w-full"
-    >
-      <el-table-column prop="name" label="名称" width="160" />
-      <el-table-column prop="api_base" label="API Base" min-width="220" show-overflow-tooltip />
-      <el-table-column prop="provider_type" label="类型" width="140" />
-      <el-table-column label="模型数" width="90">
-        <template #default="{ row }">{{ row.models?.length ?? 0 }}</template>
-      </el-table-column>
-      <el-table-column label="操作" width="220" fixed="right">
-        <template #default="{ row }">
-          <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-          <el-button link type="primary" @click="probe(row)">探测</el-button>
-          <el-button link type="danger" @click="remove(row)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+      <el-table v-loading="loading" :data="list" stripe class="kb-table w-full">
+        <el-table-column prop="name" label="名称" width="160" />
+        <el-table-column label="来源" width="100">
+          <template #default="{ row }">
+            <el-tag v-if="isLocalProvider(row)" size="small" effect="plain" round>
+              本地
+            </el-tag>
+            <el-tag v-else type="info" size="small" effect="plain" round>远程</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="api_base" label="API Base" min-width="220" show-overflow-tooltip />
+        <el-table-column prop="provider_type" label="类型" width="140" />
+        <el-table-column label="模型数" width="90">
+          <template #default="{ row }">{{ row.models?.length ?? 0 }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="220" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+            <el-button link type="primary" @click="probe(row)">探测</el-button>
+            <el-button link type="danger" @click="remove(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
     </div>
 
     <el-dialog
       v-model="dialogVisible"
-      :title="editingId ? '编辑提供商' : '新增提供商'"
-      width="640px"
+      :title="dialogTitle"
+      width="720px"
       destroy-on-close
+      class="provider-dialog"
     >
-      <el-form label-width="100px">
+      <el-alert
+        v-if="isOllamaFlow && !editingId"
+        type="info"
+        :closable="false"
+        show-icon
+        class="mb-3"
+        title="本地 Ollama 使用 OpenAI 兼容接口（/v1）。密钥可填 ollama；模型名需与 ollama list 中一致。"
+      />
+      <el-alert
+        v-if="!isOllamaFlow && !editingId"
+        type="info"
+        :closable="false"
+        show-icon
+        class="mb-3"
+        title="远程提供商需填写可访问的 Base URL 与 API Key；下方需各选一个默认的对话模型与向量模型（若使用知识库向量化）。"
+      />
+
+      <el-form label-width="108px">
         <el-form-item label="名称">
-          <el-input v-model="form.name" />
+          <el-input v-model="form.name" placeholder="如 DeepSeek、硅基流动" />
         </el-form-item>
         <el-form-item label="API Base">
-          <el-input v-model="form.api_base" placeholder="https://api.openai.com/v1" />
+          <el-input
+            v-model="form.api_base"
+            :placeholder="
+              isOllamaFlow ? 'http://127.0.0.1:11434/v1' : 'https://api.openai.com/v1'
+            "
+          />
         </el-form-item>
         <el-form-item label="API Key">
-          <el-input v-model="form.api_key" type="password" show-password />
+          <el-input
+            v-model="form.api_key"
+            type="password"
+            show-password
+            :placeholder="isOllamaFlow ? '可填 ollama' : '必填（编辑时留空表示不修改）'"
+          />
         </el-form-item>
         <el-form-item label="类型">
-          <el-select v-model="form.provider_type">
+          <el-select v-model="form.provider_type" :disabled="true">
             <el-option label="OpenAI 兼容" value="openai_compatible" />
           </el-select>
         </el-form-item>
       </el-form>
 
-      <div class="sub-title">模型列表</div>
-      <el-table :data="form.models" size="small" border>
-        <el-table-column label="显示名" width="120">
+      <div class="sub-title flex flex-wrap items-center justify-between gap-2">
+        <span>模型列表</span>
+        <div class="flex flex-wrap gap-2">
+          <el-button size="small" round @click="addChatRow">+ 对话模型</el-button>
+          <el-button
+            v-if="!isOllamaFlow"
+            size="small"
+            round
+            @click="addEmbeddingRow"
+          >
+            + 向量模型
+          </el-button>
+        </div>
+      </div>
+      <el-table :data="form.models" size="small" border class="w-full">
+        <el-table-column label="显示名" width="130">
           <template #default="{ row }">
-            <el-input v-model="row.display_name" />
+            <el-input v-model="row.display_name" placeholder="展示名称" />
           </template>
         </el-table-column>
         <el-table-column label="model_id" min-width="160">
           <template #default="{ row }">
-            <el-input v-model="row.model_id" placeholder="gpt-4o-mini" />
+            <el-input v-model="row.model_id" placeholder="如 gpt-4o-mini、llama3" />
           </template>
         </el-table-column>
-        <el-table-column label="用途" width="120">
+        <el-table-column label="用途" width="130">
           <template #default="{ row }">
-            <el-select v-model="row.purpose">
+            <el-select v-model="row.purpose" :disabled="isOllamaFlow">
               <el-option label="对话 chat" value="chat" />
-              <el-option label="向量 embedding" value="embedding" />
+              <el-option v-if="!isOllamaFlow" label="向量 embedding" value="embedding" />
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column label="默认" width="70">
+        <el-table-column label="默认" width="80">
           <template #default="{ row }">
-            <el-switch v-model="row.is_default" />
+            <el-switch
+              v-model="row.is_default"
+              @change="
+                (v: boolean) => {
+                  if (v) onDefaultToggle(row, row.purpose, true);
+                }
+              "
+            />
           </template>
         </el-table-column>
-        <el-table-column label="启用" width="70">
+        <el-table-column label="启用" width="80">
           <template #default="{ row }">
             <el-switch v-model="row.enabled" />
+          </template>
+        </el-table-column>
+        <el-table-column label="" width="56" fixed="right">
+          <template #default="{ $index }">
+            <el-button
+              v-if="form.models.length > 1"
+              link
+              type="danger"
+              @click="removeModelRow($index)"
+            >
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * 对话页：vue-element-plus-x（Conversations、Sender、XMarkdown、Typewriter、ThoughtChain）
- * @see https://element-plus-x.com
+ * 对话页：Sender variant=updown（上输入、下工具栏），避免 EditorSender 富文本光标/占位异常
+ * @see https://element-plus-x.com/components/Sender
  */
 import {
   computed,
@@ -54,9 +54,7 @@ const streamPhase = ref<StreamPhase | null>(null);
 const selectedChatModelKey = ref("");
 const chatModels = ref<ChatModelOptionOut[]>([]);
 
-const senderRef = ref<{
-  clear: () => void;
-} | null>(null);
+const senderRef = ref<{ clear: () => void } | null>(null);
 
 const chatScrollbarRef = ref<InstanceType<typeof ElScrollbar> | null>(null);
 
@@ -176,11 +174,6 @@ watch(selectedChatModelKey, (v) => {
   else localStorage.setItem(CHAT_MODEL_LS, v);
 });
 
-const defaultChatHint = computed(() => {
-  const d = chatModels.value.find((m) => m.is_default);
-  return d ? `${d.provider_name} · ${d.model_id}` : "系统默认";
-});
-
 function isLastAssistantIndex(i: number) {
   return i === messages.value.length - 1 && messages.value[i]?.role === "assistant";
 }
@@ -261,7 +254,9 @@ async function loadChatModels() {
     if (saved && data.some((m) => m.id === Number(saved))) {
       selectedChatModelKey.value = saved;
     } else {
-      selectedChatModelKey.value = "";
+      const def = data.find((m) => m.is_default);
+      const fallback = def ?? data[0];
+      selectedChatModelKey.value = fallback ? String(fallback.id) : "";
     }
   } catch {
     chatModels.value = [];
@@ -348,6 +343,19 @@ async function deleteConv(id: number) {
   }
 }
 
+function patchComposerTextarea() {
+  void nextTick(() => {
+    const root = document.querySelector(".chat-sender-updown");
+    const ta = root?.querySelector("textarea");
+    if (!ta) return;
+    ta.setAttribute("spellcheck", "false");
+    ta.setAttribute("autocomplete", "off");
+    ta.setAttribute("data-gramm", "false");
+    ta.setAttribute("data-gramm_editor", "false");
+    ta.setAttribute("data-enable-grammarly", "false");
+  });
+}
+
 async function sendMessage(text?: string) {
   const raw = (text ?? inputText.value).trim();
   const convId = activeConvId.value;
@@ -378,8 +386,12 @@ async function sendMessage(text?: string) {
     const streamBody: { content: string; chat_model_id?: number } = {
       content: raw,
     };
-    if (selectedChatModelKey.value !== "") {
-      streamBody.chat_model_id = Number(selectedChatModelKey.value);
+    const mid = Number(selectedChatModelKey.value);
+    const def = chatModels.value.find((m) => m.is_default);
+    if (selectedChatModelKey.value !== "" && !Number.isNaN(mid)) {
+      if (!def || mid !== def.id) {
+        streamBody.chat_model_id = mid;
+      }
     }
     await postMessageStream(url, token, streamBody, (ev: SsePayload) => {
       const last = messages.value[assistantIdx];
@@ -425,11 +437,14 @@ onMounted(async () => {
   await loadKbs();
   await loadConvs();
   await loadChatModels();
+  patchComposerTextarea();
   if (activeConvId.value) {
     activeConv.value =
       convs.value.find((c) => c.id === activeConvId.value) ?? null;
   }
 });
+
+watch([chatModels, activeConvId], () => patchComposerTextarea(), { flush: "post" });
 
 onUnmounted(() => {
   disconnectChatScrollObserver();
@@ -610,47 +625,63 @@ onUnmounted(() => {
           </div>
 
           <div class="composer-bar border-t border-border bg-muted/30 px-3 py-3 sm:px-4">
-            <div
-              v-if="chatModels.length"
-              class="composer-model-row mb-2 flex items-center gap-2 px-0.5"
+            <p
+              v-if="!chatModels.length"
+              class="mb-2 px-1 text-xs text-muted-foreground"
             >
-              <span class="shrink-0 text-xs font-medium text-muted-foreground"
-                >模型</span
+              未加载到可用对话模型，请先在「模型设置」中配置。
+            </p>
+            <div
+              class="composer-sender-shell overflow-hidden rounded-2xl border border-border bg-card shadow-[0_1px_3px_hsl(var(--foreground)/0.06),0_4px_14px_hsl(var(--foreground)/0.04)]"
+            >
+              <Sender
+                ref="senderRef"
+                v-model="inputText"
+                variant="updown"
+                :show-updown="true"
+                :submit-type="'enter'"
+                :loading="sending"
+                :disabled="!activeConvId || sending"
+                :allow-speech="false"
+                :clearable="false"
+                placeholder="输入问题…（Enter 发送，Shift+Enter 换行）"
+                :auto-size="{ minRows: 2, maxRows: 10 }"
+                class="chat-sender-updown"
+                @submit="onSenderSubmit"
               >
-              <el-select
-                v-model="selectedChatModelKey"
-                size="default"
-                class="composer-model-select min-w-0 flex-1"
-                :teleported="true"
-                placeholder="选择模型"
-              >
-                <el-option
-                  :label="`默认 · ${defaultChatHint}`"
-                  value=""
-                />
-                <el-option
-                  v-for="om in chatModels.filter((x) => !x.is_default)"
-                  :key="om.id"
-                  :label="`${om.provider_name} · ${om.display_name}`"
-                  :value="String(om.id)"
-                />
-              </el-select>
+                <template v-if="chatModels.length" #prefix>
+                  <div class="chat-model-prefix flex min-w-0 flex-1 items-center gap-2">
+                    <span class="shrink-0 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+                      >模型</span
+                    >
+                    <el-select
+                      v-model="selectedChatModelKey"
+                      size="small"
+                      class="composer-model-select model-select-pill min-w-0 flex-1"
+                      filterable
+                      :teleported="true"
+                      placeholder="选择模型"
+                    >
+                      <el-option
+                        v-for="m in chatModels"
+                        :key="m.id"
+                        :value="String(m.id)"
+                        :label="m.display_name"
+                      >
+                        <div class="model-option-stack py-0.5">
+                          <div class="text-sm font-medium leading-snug text-foreground">
+                            {{ m.display_name }}
+                          </div>
+                          <div class="text-xs leading-snug text-muted-foreground">
+                            {{ m.subtitle || "—" }}
+                          </div>
+                        </div>
+                      </el-option>
+                    </el-select>
+                  </div>
+                </template>
+              </Sender>
             </div>
-
-            <Sender
-              ref="senderRef"
-              v-model="inputText"
-              :submit-type="'enter'"
-              :loading="sending"
-              :disabled="!activeConvId || sending"
-              :allow-speech="false"
-              :clearable="false"
-              :show-updown="false"
-              placeholder="输入问题…（Enter 发送，Shift+Enter 换行）"
-              :auto-size="{ minRows: 2, maxRows: 8 }"
-              class="chat-sender"
-              @submit="onSenderSubmit"
-            />
           </div>
         </div>
       </section>
@@ -707,22 +738,116 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.chat-sender :deep(.el-sender-wrap) {
-  border-radius: 0.75rem;
-  border: 1px solid hsl(var(--border));
-  background: hsl(var(--background));
-}
-
-.chat-sender :deep(.el-sender-input .el-textarea__inner) {
+/* Sender 垂直变体：原生 textarea，光标/占位符行为正常 */
+.composer-sender-shell :deep(.el-sender-wrap) {
   border: none;
-  box-shadow: none;
+  border-radius: inherit;
   background: transparent;
+  box-shadow: none;
 }
 
-.composer-model-select :deep(.el-select__wrapper) {
-  min-height: 36px;
-  border-radius: 0.75rem;
-  background: hsl(var(--muted) / 0.55);
+.chat-sender-updown :deep(.el-sender) {
+  border: none;
+  border-radius: inherit;
+  background: transparent;
+  box-shadow: none;
+}
+
+.chat-sender-updown :deep(.el-sender-content.content-variant-updown) {
+  flex-direction: column;
+  gap: 0;
+  border-radius: inherit;
+}
+
+.chat-sender-updown :deep(.el-sender-input) {
+  width: 100%;
+}
+
+.chat-sender-updown :deep(.el-sender-input .el-textarea__inner) {
+  min-height: 5.5rem;
+  padding: 0.875rem 1rem 0.75rem;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  resize: none;
+}
+
+.chat-sender-updown :deep(.el-sender-input .el-textarea__inner:focus) {
+  outline: none;
+  box-shadow: none;
+}
+
+.chat-sender-updown :deep(.el-sender-input .el-textarea__inner::placeholder) {
+  color: hsl(var(--muted-foreground));
+  opacity: 0.92;
+}
+
+.chat-sender-updown :deep(.el-sender-updown-wrap) {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem 0.625rem;
+  border-top: 1px solid hsl(var(--border) / 0.75);
+  background: hsl(var(--muted) / 0.4);
+}
+
+.chat-sender-updown :deep(.el-sender-prefix) {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.chat-sender-updown :deep(.el-sender-action-list) {
+  flex-shrink: 0;
+}
+
+.chat-sender-updown :deep(.el-send-button .el-button) {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  background: hsl(var(--primary));
+  border: none;
+  color: hsl(var(--primary-foreground));
+  transition:
+    transform 0.15s ease,
+    filter 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.chat-sender-updown :deep(.el-send-button .el-button:not(:disabled):hover) {
+  filter: brightness(1.06);
+}
+
+.chat-sender-updown :deep(.el-send-button .el-button:disabled) {
+  opacity: 0.38;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+.model-select-pill :deep(.el-select__wrapper) {
+  min-height: 2.125rem;
+  border-radius: 9999px;
+  padding-left: 0.75rem;
+  padding-right: 0.5rem;
+  border: 1px solid hsl(var(--border) / 0.85);
+  background: hsl(var(--background));
+  box-shadow: 0 1px 2px hsl(var(--foreground) / 0.04);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.model-select-pill :deep(.el-select__wrapper:hover),
+.model-select-pill :deep(.el-select__wrapper.is-focused) {
+  border-color: hsl(var(--primary) / 0.5);
+}
+
+.composer-model-select:not(.model-select-pill) :deep(.el-select__wrapper) {
+  min-height: 32px;
 }
 
 .elx-md-stream :deep(.elx-xmarkdown-container) {

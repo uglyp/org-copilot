@@ -25,6 +25,8 @@ export interface ChatModelOptionOut {
   provider_id: number;
   provider_name: string;
   is_default: boolean;
+  provider_kind: "local" | "remote";
+  subtitle: string;
 }
 
 export interface KnowledgeBaseOut {
