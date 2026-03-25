@@ -3,7 +3,7 @@
 .env.*
 !.env.example
 
-# Python
+# ——— Backend (Python) ———
 __pycache__/
 *.py[cod]
 *$py.class
@@ -16,27 +16,42 @@ dist/
 build/
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+*.cover
+*.pyo
+*.pyd
 
-# Node / frontend
+# Backend runtime data (Qdrant 向量库、上传文件，开发时自动生成)
+backend/data/qdrant_local/
+backend/data/uploads/
+
+# ——— Frontend (Node / Vite / Vue) ———
 node_modules/
 frontend/dist/
 *.local
 
-# OS / IDE
+# TypeScript incremental / project references
+*.tsbuildinfo
+
+# vue-tsc 从 vite.config.ts 生成的产物（源码以 vite.config.ts 为准）
+frontend/vite.config.js
+frontend/vite.config.d.ts
+
+# ——— OS / IDE ———
 .DS_Store
 .idea/
 .vscode/
 *.swp
 *.swo
 
-# Logs & local runtime data (Qdrant, uploads — recreated at dev time)
+# Logs
 *.log
-backend/data/qdrant_local/
-backend/data/uploads/
-
-# TypeScript incremental (local)
-*.tsbuildinfo
 
 # Documentation: any directory named docs anywhere in the tree (never push)
 **/docs/
