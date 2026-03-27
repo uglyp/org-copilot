@@ -131,6 +131,7 @@ class Document(Base):
     kb_id: Mapped[int] = mapped_column(ForeignKey("knowledge_bases.id"), index=True)
     filename: Mapped[str] = mapped_column(String(512))
     storage_path: Mapped[str] = mapped_column(String(1024))
+    modality: Mapped[str] = mapped_column(String(16), default="text")  # text | image
     status: Mapped[str] = mapped_column(String(32), default="queued")  # queued,processing,ready,failed
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -153,6 +154,8 @@ class Chunk(Base):
     kb_id: Mapped[int] = mapped_column(ForeignKey("knowledge_bases.id"), index=True)
     chunk_index: Mapped[int] = mapped_column(Integer)
     content: Mapped[str] = mapped_column(Text)
+    modality: Mapped[str] = mapped_column(String(16), default="text")  # text | image
+    extra_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     qdrant_point_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
 
     document: Mapped[Document] = relationship(back_populates="chunks")

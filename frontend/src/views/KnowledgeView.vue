@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import type { UploadFile } from "element-plus";
 import type { AxiosError } from "axios";
+import { Picture } from "@element-plus/icons-vue";
 import { http } from "@/api/http";
 import type { DocumentOut, KnowledgeBaseOut } from "@/api/types";
 
@@ -152,16 +153,25 @@ onMounted(loadKbs);
             <el-upload
               :auto-upload="false"
               :show-file-list="false"
-              accept=".pdf,.txt,.md,.markdown"
+              accept=".pdf,.txt,.md,.markdown,.png,.jpg,.jpeg,.webp,.gif,.bmp"
               @change="onFileChange"
             >
               <el-button type="primary" class="!rounded-lg" :loading="uploadLoading">
-                上传 PDF / TXT / MD
+                上传文档或图片
               </el-button>
             </el-upload>
           </div>
           <el-table v-if="activeKbId" :data="docs" stripe class="kb-table w-full">
-            <el-table-column prop="filename" label="文件名" min-width="200" />
+            <el-table-column prop="filename" label="文件名" min-width="200">
+              <template #default="{ row }">
+                <span class="inline-flex items-center gap-1.5">
+                  <el-icon v-if="row.modality === 'image'" class="text-primary" :title="'图像（OCR 入库）'">
+                    <Picture />
+                  </el-icon>
+                  {{ row.filename }}
+                </span>
+              </template>
+            </el-table-column>
             <el-table-column prop="status" label="状态" width="120" />
             <el-table-column label="错误" min-width="160">
               <template #default="{ row }">

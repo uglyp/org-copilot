@@ -12,8 +12,10 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.hf_env import configure_hf_hub_env
 from app.models.entities import Chunk, Document, KnowledgeBase
 from app.services.document_extract import extract_text_from_file
+from app.services.image_ingest import is_image_path, ocr_image_to_canonical
 from app.services.model_resolver import resolve_default_embedding
 from app.services.openai_compat import embed_texts
 from app.services.qdrant_store import delete_by_doc_id, upsert_chunks
@@ -24,6 +26,9 @@ logger = logging.getLogger(__name__)
 
 async def process_document_ingestion(session: AsyncSession, doc_id: int) -> None:
     """单文档完整流水线；由 `workers.tasks.ingest_document_task` 在独立 session 里调用并 commit。"""
+    # 与 `main.py` 入口解耦时（如单独脚本）也保证 fastembed 能读到 HF_ENDPOINT 等镜像
+    configure_hf_hub_env()
+
     r = await session.execute(select(Document).where(Document.id == doc_id))
     doc = r.scalar_one_or_none()
     if not doc:
@@ -56,7 +61,15 @@ async def process_document_ingestion(session: AsyncSession, doc_id: int) -> None
         if not os.path.isfile(doc.storage_path):
             raise FileNotFoundError(doc.storage_path)
 
-        raw = extract_text_from_file(doc.storage_path)
+        extra_base: dict | None = None
+        if doc.modality == "image" or is_image_path(doc.storage_path):
+            canonical, extra_base = ocr_image_to_canonical(
+                doc.storage_path, filename=doc.filename
+            )
+            raw = canonical
+            doc.modality = "image"
+        else:
+            raw = extract_text_from_file(doc.storage_path)
         parts = chunk_text(raw)
         if not parts:
             doc.status = "failed"
@@ -70,6 +83,7 @@ async def process_document_ingestion(session: AsyncSession, doc_id: int) -> None
 
         embeddings = await embed_texts(cfg, parts)
 
+        chunk_modality = "image" if doc.modality == "image" else "text"
         new_chunks: list[Chunk] = []
         for idx, text in enumerate(parts):
             # qdrant_point_id 有唯一索引；flush 前每条占位必须不同，写入 Qdrant 后再更新为真实 point id
@@ -78,6 +92,8 @@ async def process_document_ingestion(session: AsyncSession, doc_id: int) -> None
                 kb_id=doc.kb_id,
                 chunk_index=idx,
                 content=text,
+                modality=chunk_modality,
+                extra_json=extra_base if chunk_modality == "image" else None,
                 qdrant_point_id=str(uuid.uuid4()),
             )
             session.add(ch)
@@ -91,6 +107,7 @@ async def process_document_ingestion(session: AsyncSession, doc_id: int) -> None
                 "chunk_index": i,
                 "chunk_db_id": db_ids[i],
                 "filename": doc.filename,
+                "modality": chunk_modality,
             }
             for i, t in enumerate(parts)
         ]

@@ -27,6 +27,14 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "greenlet>=3.0.0",
     "fastembed>=0.3.0",
+    "Pillow>=10.0.0",
+]
+
+[project.optional-dependencies]
+# 知识库图片 OCR（PaddleOCR）；安装：uv sync --extra image
+image = [
+    "paddlepaddle>=2.6.0",
+    "paddleocr>=2.7.0,<3.0.0",
 ]
 
 [tool.hatch.build.targets.wheel]

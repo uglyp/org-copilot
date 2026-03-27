@@ -19,10 +19,13 @@ from app.db.session import get_db
 from sqlalchemy import delete
 
 from app.models.entities import Chunk, Document, KnowledgeBase, User
+from app.services.image_ingest import is_image_extension, verify_image_file
 from app.services.qdrant_store import delete_by_doc_id
 from app.workers.tasks import ingest_document_task
 
 router = APIRouter(prefix="/knowledge-bases", tags=["knowledge"])
+
+TEXT_UPLOAD_EXT = frozenset({".pdf", ".txt", ".md", ".markdown"})
 
 
 class KBCreate(BaseModel):
@@ -42,6 +45,7 @@ class KBOut(BaseModel):
 class DocOut(BaseModel):
     id: int
     filename: str
+    modality: str = "text"
     status: str
     error_message: str | None
 
@@ -103,8 +107,15 @@ async def upload_doc(
     kb = await _get_kb(db, kb_id, user.id)
     settings = get_settings()
     ext = Path(file.filename or "bin").suffix.lower()
-    if ext not in (".pdf", ".txt", ".md", ".markdown"):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Unsupported file type")
+    if ext in TEXT_UPLOAD_EXT:
+        modality = "text"
+    elif is_image_extension(ext):
+        modality = "image"
+    else:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="不支持的文件类型（支持 PDF/TXT/Markdown 与常见图片：png/jpg/webp/gif/bmp）",
+        )
     sub = os.path.join(settings.upload_dir, str(kb_id))
     os.makedirs(sub, exist_ok=True)
     safe_name = f"{uuid.uuid4().hex}{ext}"
@@ -112,10 +123,20 @@ async def upload_doc(
     content = await file.read()
     with open(path, "wb") as f:
         f.write(content)
+    if modality == "image":
+        try:
+            verify_image_file(path)
+        except ValueError as e:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     doc = Document(
         kb_id=kb.id,
         filename=file.filename or safe_name,
         storage_path=path,
+        modality=modality,
         status="queued",
     )
     db.add(doc)

@@ -84,16 +84,22 @@ async def _build_context_from_hits(
 
         seen_ctx.add(cid)
         fn = pl.get("filename") or "?"
-        context_parts.append(f"[片段 id={cid} 来源文件={fn}] {content}")
+        modality = "text"
+        if ch is not None and getattr(ch, "modality", None):
+            modality = ch.modality
+        elif pl.get("modality"):
+            modality = str(pl["modality"])
+        prefix = "[图像/OCR] " if modality == "image" else ""
+        context_parts.append(f"{prefix}[片段 id={cid} 来源文件={fn}] {content}")
 
-        citations.append(
-            {
-                "chunk_id": cid,
-                "doc_id": ch.doc_id if ch is not None else pl.get("doc_id"),
-                "excerpt": content[:500],
-                "source": "mysql_chunk" if ch is not None else "qdrant_payload",
-            }
-        )
+        cit: dict[str, Any] = {
+            "chunk_id": cid,
+            "doc_id": ch.doc_id if ch is not None else pl.get("doc_id"),
+            "excerpt": content[:500],
+            "source": "mysql_chunk" if ch is not None else "qdrant_payload",
+            "modality": modality,
+        }
+        citations.append(cit)
 
     return context_parts, citations
 

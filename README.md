@@ -73,6 +73,13 @@
 - **远程 API**：设 `USE_LOCAL_EMBEDDING=false`，并在「模型设置」中配置 OpenAI 兼容 **embedding**，或在 `.env` 中设置 `EMBEDDING_API_KEY` / `EMBEDDING_API_BASE` / `EMBEDDING_MODEL`，系统会尝试自动创建「Embedding（API）」提供商。
 - **对话模型**：DeepSeek 仅用于 **chat**。在 `.env` 中配置 `DEEPSEEK_API_KEY` 后，尚无提供商的用户会自动创建 DeepSeek 对话模型。
 
+### 知识库图片（OCR 入库，第一期）
+
+- 知识库支持上传 **PNG / JPG / WebP / GIF / BMP** 等图片：后端用 **PaddleOCR** 识别图中文字，再与 PDF/文本一样 **分块、embedding、写入同一 Qdrant collection**。
+- **可选依赖**（未安装时上传图片会在入库阶段失败并提示）：在 `backend` 目录执行 `uv sync --extra image`；国内可配合 **PyPI 镜像**：`uv sync --extra image --default-index https://pypi.tuna.tsinghua.edu.cn/simple`。亦可按 [Paddle 官方说明](https://www.paddlepaddle.org.cn/install/quick) 安装 `paddlepaddle` + `paddleocr`（部分 CPU/GPU 与 macOS ARM 需选对轮子）。
+- **Hugging Face 镜像**（本地 embedding 首次下载 BGE 等）：在 `backend/.env` 中设置 `HF_ENDPOINT=https://hf-mirror.com`（见 `backend/.env.example`）。
+- **数据库**：拉取含多模态字段的迁移后，在 `backend` 下执行 `uv run alembic upgrade head`。
+
 ### Ollama 本地对话（Qwen 3B 等）
 
 **分步说明、环境变量表、`curl` 校验、与 `httpx` / RAG 的关系** 见 **[`docs/LOCAL_DEV_AND_OLLAMA.md`](docs/LOCAL_DEV_AND_OLLAMA.md)**。本节为最小操作摘要。

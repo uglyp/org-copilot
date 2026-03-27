@@ -38,6 +38,8 @@ export interface KnowledgeBaseOut {
 export interface DocumentOut {
   id: number;
   filename: string;
+  /** text | image */
+  modality: string;
   status: string;
   error_message: string | null;
 }

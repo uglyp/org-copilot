@@ -18,6 +18,15 @@ FastAPI 应用；依赖由 **`pyproject.toml`** 声明，**`uv.lock`** 锁定版
    uv sync
    ```
 
+   **国内 PyPI 镜像**（可选，拉取 `paddlepaddle` 等较大包时更稳）：
+
+   ```bash
+   uv sync --default-index https://pypi.tuna.tsinghua.edu.cn/simple
+   uv sync --extra image --default-index https://pypi.tuna.tsinghua.edu.cn/simple
+   ```
+
+   若清华源缺少 Paddle 官方 wheel，可改用 `https://mirror.baidu.com/pypi/simple`，或按 [Paddle 安装页](https://www.paddlepaddle.org.cn/install/quick) 选择平台。环境变量也可用 `UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple`。
+
 3. 仅使用 pip 时（不推荐作日常开发主路径）：
 
    ```bash
