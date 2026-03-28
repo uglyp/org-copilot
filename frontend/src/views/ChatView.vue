@@ -178,17 +178,10 @@ function isLastAssistantIndex(i: number) {
   return i === messages.value.length - 1 && messages.value[i]?.role === "assistant";
 }
 
+/** 助手正文统一用 XMarkdown，与流式阶段一致（含表格边框等）；勿在结束后改用 Typewriter，否则表格等样式会丢失 */
 function useXMarkdownForAssistant(i: number) {
-  return (
-    sending.value && isLastAssistantIndex(i) && messages.value[i].content.length > 0
-  );
-}
-
-function useTypewriterForAssistant(i: number) {
   const m = messages.value[i];
-  if (!m || m.role !== "assistant") return false;
-  if (sending.value && isLastAssistantIndex(i)) return false;
-  return true;
+  return m?.role === "assistant" && m.content.length > 0;
 }
 
 /** 展示思考链：有阶段且尚未输出正文 token，避免与下方 Markdown 重复占位 */
@@ -603,17 +596,6 @@ onUnmounted(() => {
                   </div>
 
                   <div
-                    v-else-if="useTypewriterForAssistant(i)"
-                    class="rounded-xl border border-border bg-background px-3 py-2 shadow-sm"
-                  >
-                    <Typewriter
-                      :content="m.content"
-                      :is-markdown="true"
-                      :typing="false"
-                    />
-                  </div>
-
-                  <div
                     v-else-if="m.role === 'assistant' && !showThoughtChainPanel(i)"
                     class="rounded-xl border border-dashed border-border/80 bg-background/80 px-3 py-2 text-sm text-muted-foreground"
                   >
@@ -632,7 +614,7 @@ onUnmounted(() => {
               未加载到可用对话模型，请先在「模型设置」中配置。
             </p>
             <div
-              class="composer-sender-shell overflow-hidden rounded-2xl border border-border bg-card shadow-[0_1px_3px_hsl(var(--foreground)/0.06),0_4px_14px_hsl(var(--foreground)/0.04)]"
+              class="composer-sender-shell overflow-hidden rounded-2xl border border-border bg-card shadow-composer"
             >
               <Sender
                 ref="senderRef"
