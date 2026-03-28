@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+.cursor/
 
 # ——— Backend (Python) ———
 __pycache__/
