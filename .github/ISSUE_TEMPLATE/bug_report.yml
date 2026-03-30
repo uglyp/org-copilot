@@ -1,0 +1,49 @@
+name: 缺陷报告
+description: 报告可复现的错误或异常行为
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先搜索是否已有相同 Issue。若涉及**安全漏洞**，请勿在此提交，请阅读仓库根目录 [SECURITY.md](https://github.com/uglyp/KB-Copilot/blob/main/SECURITY.md)。
+  - type: textarea
+    id: summary
+    attributes:
+      label: 简要描述
+      description: 一句话说明问题。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 从克隆/登录到触发问题的具体操作顺序。
+      placeholder: |
+        1. …
+        2. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 含报错信息、HTTP 状态码、后端日志片段（请脱敏）。
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: 环境
+      description: OS、Python/Node 版本、是否 Docker Qdrant、embedding 模式（本地/API）等。
+      placeholder: |
+        - OS:
+        - Python:
+        - Node:
+    validations:
+      required: true

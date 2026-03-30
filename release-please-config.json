@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    ".": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "simple",
+      "changelog-sections": [
+        { "type": "feat", "section": "新增" },
+        { "type": "fix", "section": "修复" },
+        { "type": "perf", "section": "性能" },
+        { "type": "revert", "section": "回退" },
+        { "type": "docs", "section": "文档" },
+        { "type": "chore", "section": "构建与杂项", "hidden": true },
+        { "type": "test", "section": "测试", "hidden": true },
+        { "type": "ci", "section": "CI", "hidden": true }
+      ],
+      "extra-files": [
+        {
+          "type": "toml",
+          "path": "backend/pyproject.toml",
+          "jsonpath": "$.project.version"
+        }
+      ]
+    }
+  },
+  "pull-request-title-pattern": "chore: 发布${component} ${version}",
+  "pull-request-header": ":robot: 由 release-please 根据约定式提交生成的发布 PR，合并后将更新 CHANGELOG、版本号并创建 GitHub Release。"
+}

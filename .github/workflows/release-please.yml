@@ -1,0 +1,22 @@
+# 推送到 main 后根据约定式提交打开/更新「发布 PR」，合并后更新 CHANGELOG、版本号并打 Tag。
+# 说明见 docs/CHANGELOG_AUTOMATION.md
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
