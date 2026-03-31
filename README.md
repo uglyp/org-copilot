@@ -108,6 +108,7 @@ flowchart LR
 
 - [x] **账户与安全**：注册/登录、JWT、忘记密码与重置页；令牌 **SHA256** 落库；生产需邮件/短信（开发可用 `.env` 返回 `reset_url`）。
 - [x] **知识库与文档**：知识库管理；PDF/纯文本上传、解析、分块、入库；元数据入关系型库（MySQL / PostgreSQL）。
+- [x] **双数据库支持**：支持可配置MySQL / PostgreSQL。
 - [x] **多模态入库（第一期）**：位图上传 → **PaddleOCR** → 与同文档流水线分块/向量化（`uv sync --extra image`）；`modality` / `extra_json`；Caption 字段预留，**当前以 OCR 为主**。
 - [x] **向量与检索**：单一 Milvus **文本向量** collection；**fastembed** 或 OpenAI 兼容 **embedding**；查询为文本向量检索，可按知识库过滤。
 - [x] **RAG 对话**：拼上下文；图像块带 **`[图像/OCR]`**；**SSE**；**`citations_json`** 引用。
