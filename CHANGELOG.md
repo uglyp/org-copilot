@@ -4,6 +4,13 @@
 
 **自动维护：** 推送 `main` 后可用 Release Please 根据约定式提交打开「发布 PR」并更新本文件与后端版本，见 [docs/CHANGELOG_AUTOMATION.md](docs/CHANGELOG_AUTOMATION.md)。
 
+## [0.4.0](https://github.com/uglyp/KB-Copilot/compare/v0.3.0...v0.4.0) (2026-03-31)
+
+
+### 新增
+
+* add dual database support for MySQL and PostgreSQL ([5122587](https://github.com/uglyp/KB-Copilot/commit/5122587d642a576992c43faee0c3dda391b05cbf))
+
 ## [0.3.0](https://github.com/uglyp/KB-Copilot/compare/v0.2.0...v0.3.0) (2026-03-31)
 
 
