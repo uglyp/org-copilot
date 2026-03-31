@@ -4,6 +4,13 @@
 
 **自动维护：** 推送 `main` 后可用 Release Please 根据约定式提交打开「发布 PR」并更新本文件与后端版本，见 [docs/CHANGELOG_AUTOMATION.md](docs/CHANGELOG_AUTOMATION.md)。
 
+## [0.3.0](https://github.com/uglyp/KB-Copilot/compare/v0.2.0...v0.3.0) (2026-03-31)
+
+
+### 新增
+
+* enhance MySQL connection handling in the backend ([c90c53b](https://github.com/uglyp/KB-Copilot/commit/c90c53b9d722a8cf427d3c39834f5ee3403f2e38))
+
 ## [0.2.0] - 2026-03-31
 
 ### 破坏性变更
