@@ -14,15 +14,18 @@ from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.core.config import get_settings
+from app.core.config import get_settings, mysql_url_and_connect_args
 
 
 settings = get_settings()
-engine = create_async_engine(
-    settings.database_url,
-    echo=settings.debug,
-    pool_pre_ping=True,
-)
+_db_url, _mysql_connect = mysql_url_and_connect_args(settings.database_url)
+_engine_kw: dict = {
+    "echo": settings.debug,
+    "pool_pre_ping": True,
+}
+if _mysql_connect:
+    _engine_kw["connect_args"] = _mysql_connect
+engine = create_async_engine(_db_url, **_engine_kw)
 async_session_factory = async_sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
 )

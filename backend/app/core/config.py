@@ -9,9 +9,37 @@
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal, Self
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def mysql_url_and_connect_args(database_url: str) -> tuple[str, dict[str, object]]:
+    """将 `allow_public_key_retrieval` 从 URL 查询串挪到 `connect_args`。
+
+    部分 SQLAlchemy + aiomysql 版本会把查询参数误传给 `Connection`，触发
+    ``unexpected keyword argument 'allow_public_key_retrieval'``；经 connect_args
+    传入 pymysql/aiomysql 则正常。
+    """
+    if not (
+        database_url.startswith("mysql+aiomysql://")
+        or database_url.startswith("mysql+pymysql://")
+    ):
+        return database_url, {}
+    parsed = urlparse(database_url)
+    qsl = parse_qsl(parsed.query, keep_blank_values=True)
+    connect_args: dict[str, object] = {}
+    kept: list[tuple[str, str]] = []
+    for k, v in qsl:
+        if k == "allow_public_key_retrieval":
+            connect_args[k] = str(v).lower() in ("true", "1", "yes", "on")
+        else:
+            kept.append((k, v))
+    new_query = urlencode(kept)
+    clean = urlunparse(parsed._replace(query=new_query))
+    return clean, connect_args
+
 
 # 无论从哪里启动 uvicorn，都读取 backend/.env（避免 cwd 不是 backend 时用错默认数据库密码）
 _BACKEND_DIR = Path(__file__).resolve().parent.parent.parent

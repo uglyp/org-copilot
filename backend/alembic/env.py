@@ -19,7 +19,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import create_engine, pool
 
-from app.core.config import get_settings
+from app.core.config import get_settings, mysql_url_and_connect_args
 from app.db.base import Base
 import app.models.entities  # noqa: F401 — 注册 ORM 表到 Base.metadata
 
@@ -33,7 +33,7 @@ target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
     """`alembic upgrade head --sql` 等场景会走这里。"""
-    url = get_settings().sync_database_url()
+    url, _ = mysql_url_and_connect_args(get_settings().sync_database_url())
     dialect_opts: dict = {}
     if url.startswith("mysql+"):
         dialect_opts["mysql_charset"] = "utf8mb4"
@@ -50,10 +50,13 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """默认：`alembic upgrade head` 连库执行 revision 脚本。"""
-    connectable = create_engine(
-        get_settings().sync_database_url(),
-        poolclass=pool.NullPool,
+    sync_url, mysql_connect = mysql_url_and_connect_args(
+        get_settings().sync_database_url()
     )
+    eng_kw: dict = {"poolclass": pool.NullPool}
+    if mysql_connect:
+        eng_kw["connect_args"] = mysql_connect
+    connectable = create_engine(sync_url, **eng_kw)
 
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
