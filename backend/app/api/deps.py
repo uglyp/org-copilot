@@ -19,6 +19,7 @@ from app.core.config import get_settings
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.models.entities import User
+from app.services.permissions import PermissionContext
 from app.services.model_readiness import (
     is_chat_ready,
     is_embedding_ready,
@@ -44,6 +45,13 @@ async def get_current_user(
     if not user:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
+
+
+async def get_permission_context(
+    user: Annotated[User, Depends(get_current_user)],
+) -> PermissionContext:
+    """从数据库中的 `User` 行派生权限上下文（权威源，与 JWT 声明对齐）。"""
+    return PermissionContext.from_user(user)
 
 
 async def require_chat_ready(

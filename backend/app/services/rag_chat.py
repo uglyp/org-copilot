@@ -18,7 +18,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.models.entities import Chunk, LlmUsageRecord, Message
+from app.models.entities import Chunk, LlmUsageRecord, Message, User
+from app.services.permissions import (
+    document_visible_to,
+    load_documents_for_acl_check,
+)
 from app.services.model_resolver import (
     resolve_chat_model,
     resolve_default_embedding,
@@ -110,6 +114,37 @@ async def _build_context_from_hits(
     return context_parts, citations
 
 
+async def _filter_hits_by_document_acl(
+    session: AsyncSession,
+    hits: list[dict[str, Any]],
+    acl_user: User,
+    *,
+    public_branch_label: str,
+) -> list[dict[str, Any]]:
+    """第三层：按关系库文档元数据过滤（分行/密级/部门）。与列表接口一致；Milvus 层 ACL 为额外收紧，不能替代本步。"""
+    doc_ids: list[int] = []
+    for h in hits:
+        pl = h.get("payload") or {}
+        did = pl.get("doc_id")
+        if did is not None:
+            doc_ids.append(int(did))
+    if not doc_ids:
+        return hits
+    docs = await load_documents_for_acl_check(session, list(dict.fromkeys(doc_ids)))
+    out: list[dict[str, Any]] = []
+    for h in hits:
+        pl = h.get("payload") or {}
+        did = pl.get("doc_id")
+        if did is None:
+            continue
+        doc = docs.get(int(did))
+        if doc is None:
+            continue
+        if document_visible_to(doc, acl_user, public_branch_label=public_branch_label):
+            out.append(h)
+    return out
+
+
 async def stream_chat_reply(
     session: AsyncSession,
     *,
@@ -118,6 +153,7 @@ async def stream_chat_reply(
     conversation_id: int,
     user_text: str,
     user_message_id: int,
+    acl_user: User,
     top_k: int | None = None,
     chat_model_id: int | None = None,
 ) -> AsyncIterator[str]:
@@ -147,8 +183,24 @@ async def stream_chat_reply(
             # embed_texts 返回的是「每条文本一个向量」的列表；search_kb 需要单个 float 向量
             if not q_emb:
                 raise ValueError("embedding 未返回向量")
+            # 向量检索多取一些，再经文档 ACL 过滤后截断，避免 Milvus 未带 ACL 或部门过滤后条数过少
+            search_limit = min(max(top_k * 3, top_k), 50)
+            acl_kw: User | None = acl_user if settings.enterprise_acl_enabled else None
             # pymilvus 为同步 IO，放在线程池避免长时间卡住 asyncio 事件循环
-            hits = await asyncio.to_thread(search_kb, kb_id, q_emb[0], top_k)
+            hits = await asyncio.to_thread(
+                search_kb,
+                kb_id,
+                q_emb[0],
+                search_limit,
+                acl_user=acl_kw,
+            )
+            hits = await _filter_hits_by_document_acl(
+                session,
+                hits,
+                acl_user,
+                public_branch_label=settings.public_branch_label,
+            )
+            hits = hits[:top_k]
         except Exception as e:  # noqa: BLE001
             yield _sse(
                 {

@@ -19,13 +19,23 @@ from app.db.base import Base
 
 
 class User(Base):
-    """终端用户：登录名唯一，密码仅存哈希。"""
+    """终端用户：登录名唯一，密码仅存哈希。
+
+    企业权限：`branch` / `security_level` / `departments_json` 等用于文档级 ACL 与 JWT 载荷。
+    """
 
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     hashed_password: Mapped[str] = mapped_column(String(255))
+    # 企业 ACL：分行标识；「公共」表示全行可见文档所在分支标签
+    branch: Mapped[str] = mapped_column(String(128), default="公共")
+    role: Mapped[str] = mapped_column(String(64), default="user")
+    # 用户可访问的文档密级上限（1～4，越大可访问越高密级文档，要求 doc.security_level <= 该值）
+    security_level: Mapped[int] = mapped_column(Integer, default=4)
+    departments_json: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    org_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -41,6 +51,11 @@ class User(Base):
     )
     password_reset_tokens: Mapped[list["PasswordResetToken"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
+    )
+    documents_created: Mapped[list["Document"]] = relationship(
+        "Document",
+        back_populates="creator",
+        foreign_keys="Document.creator_user_id",
     )
 
 
@@ -104,7 +119,7 @@ class LLMModel(Base):
 
 
 class KnowledgeBase(Base):
-    """知识库：用户隔离；文档与向量检索均带 `kb_id` 过滤。"""
+    """知识库：默认属主隔离；可选 `is_org_shared` + `org_id` 供同组织只读协作。"""
 
     __tablename__ = "knowledge_bases"
 
@@ -112,6 +127,8 @@ class KnowledgeBase(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     name: Mapped[str] = mapped_column(String(256))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    org_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    is_org_shared: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -123,7 +140,10 @@ class KnowledgeBase(Base):
 
 
 class Document(Base):
-    """上传的原始文件元数据；`status` 跟踪解析/向量化流水线。"""
+    """上传的原始文件元数据；`status` 跟踪解析/向量化流水线。
+
+    企业 ACL：`branch` / `security_level` / `department` 与 Milvus 标量及 JWT 检索过滤一致。
+    """
 
     __tablename__ = "documents"
 
@@ -134,11 +154,21 @@ class Document(Base):
     modality: Mapped[str] = mapped_column(String(16), default="text")  # text | image
     status: Mapped[str] = mapped_column(String(32), default="queued")  # queued,processing,ready,failed
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    branch: Mapped[str] = mapped_column(String(128), default="公共")
+    department: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    security_level: Mapped[int] = mapped_column(Integer, default=1)
+    creator_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
 
     knowledge_base: Mapped[KnowledgeBase] = relationship(back_populates="documents")
+    creator: Mapped[User | None] = relationship(
+        back_populates="documents_created",
+        foreign_keys=[creator_user_id],
+    )
     chunks: Mapped[list[Chunk]] = relationship(
         back_populates="document", cascade="all, delete-orphan"
     )

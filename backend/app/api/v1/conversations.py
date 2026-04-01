@@ -17,6 +17,7 @@ from app.api.deps import get_current_user, require_chat_ready
 from app.db.session import get_db
 from app.models.entities import Conversation, KnowledgeBase, Message, User
 from app.services.model_resolver import resolve_chat_model
+from app.services.permissions import kb_access_filter
 from app.services.rag_chat import stream_chat_reply
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
@@ -71,7 +72,8 @@ async def create_conversation(
 ) -> Conversation:
     r = await db.execute(
         select(KnowledgeBase).where(
-            KnowledgeBase.id == body.kb_id, KnowledgeBase.user_id == user.id
+            KnowledgeBase.id == body.kb_id,
+            kb_access_filter(user),
         )
     )
     if not r.scalar_one_or_none():
@@ -158,6 +160,7 @@ async def post_message(
             conversation_id=conv.id,
             user_text=body.content,
             user_message_id=um.id,
+            acl_user=user,
             chat_model_id=body.chat_model_id,
         ):
             yield chunk

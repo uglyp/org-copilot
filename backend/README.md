@@ -37,6 +37,14 @@ FastAPI 应用；依赖由 **`pyproject.toml`** 声明，**`uv.lock`** 锁定版
 
 复制 `backend/.env.example` 为 **`backend/.env`**（与 `app/` 同级）。说明见仓库根目录 `README.md` 后端章节。
 
+## 企业权限（MySQL / PostgreSQL 通用）
+
+- 迁移 `alembic upgrade head` 后为 `users` / `documents` / `knowledge_bases` 增加分行、密级、部门、组织共享等字段；**行级控制由应用层 SQLAlchemy 条件实现**，与 PostgreSQL RLS 等价目标一致，但不依赖 RLS。
+- **默认 `ENTERPRISE_ACL_ENABLED=true`**（可在 `.env` 设为 `false`）：Milvus 检索在 `filter` 中叠加 `branch` / `security_level`；对话 RAG 在拼上下文前仍会做**文档级**校验（与列表/下载一致）。若本地已有**无 ACL 字段**的旧 Milvus 集合，请删除 `MILVUS_DB_PATH` 文件或换新 **`MILVUS_COLLECTION`** 后 **重新入库**。
+- 一键清 Lite 库并重跑 `ready` 文档流水线：`uv run python scripts/milvus_acl_upgrade.py --yes`（独立 Milvus 见脚本内 `--drop-collection` 说明）。
+- 知识库可选 **`is_org_shared` + `org_id`**：同 `org_id` 的用户可访问属主设为共享的知识库；文档列表/下载/RAG 仍受文档级 ACL 约束。
+- 本地单测：`uv run python -m unittest discover -s tests -p 'test_*.py' -v`
+
 ## 关系型数据库（MySQL / PostgreSQL 二选一）
 
 - 应用：`DATABASE_URL` 使用异步驱动 **`mysql+aiomysql://`** 或 **`postgresql+asyncpg://`**；可选 **`RELATIONAL_DB=mysql`** / **`postgresql`** 与 URL 一致时做校验。

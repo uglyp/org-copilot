@@ -38,6 +38,7 @@ async function logout() {
         <el-menu-item index="/knowledge">知识库</el-menu-item>
         <el-menu-item index="/chat">对话</el-menu-item>
         <el-menu-item index="/settings/models">模型设置</el-menu-item>
+        <el-menu-item index="/settings/account">账户与权限</el-menu-item>
         <el-menu-item index="/settings/usage">用量统计</el-menu-item>
       </el-menu>
       <div class="user">

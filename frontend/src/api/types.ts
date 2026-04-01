@@ -29,10 +29,30 @@ export interface ChatModelOptionOut {
   subtitle: string;
 }
 
+/** GET/PATCH /auth/me 与登录后用户信息 */
+export interface MeUser {
+  id: number;
+  username: string;
+  branch: string;
+  role: string;
+  security_level: number;
+  departments: string[];
+  org_id: string | null;
+}
+
+export interface MePatchResponse extends MeUser {
+  access_token: string;
+  token_type: string;
+}
+
 export interface KnowledgeBaseOut {
   id: number;
+  /** 知识库属主用户 ID，用于判断是否可编辑文档元数据等 */
+  user_id: number;
   name: string;
   description: string | null;
+  org_id: string | null;
+  is_org_shared: boolean;
 }
 
 export interface DocumentOut {
@@ -42,6 +62,11 @@ export interface DocumentOut {
   modality: string;
   status: string;
   error_message: string | null;
+  branch: string;
+  security_level: number;
+  department: string | null;
+  /** 上传者；与知识库 user_id 共同决定可否 PATCH 元数据 */
+  creator_user_id: number | null;
 }
 
 export interface ConversationOut {

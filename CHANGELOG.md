@@ -4,6 +4,18 @@
 
 **自动维护：** 推送 `main` 后可用 Release Please 根据约定式提交打开「发布 PR」并更新本文件与后端版本，见 [docs/CHANGELOG_AUTOMATION.md](docs/CHANGELOG_AUTOMATION.md)。
 
+## 未发布
+
+### 新增
+
+- **后端**：`PATCH /api/v1/auth/me` 更新当前用户分行/角色/密级/部门/组织 ID，响应内返回**新 JWT**。
+- **前端**：「账户与权限」页（`/settings/account`）；注册页可选填企业权限；知识库支持组织共享、上传时文档权限折叠表单与列表展示分行/密级/部门。
+
+### 变更
+
+- **企业 ACL**：`ENTERPRISE_ACL_ENABLED` 默认改为 **true**；RAG 拼上下文前**始终**按文档元数据做权限过滤（与知识库列表/下载一致）。仅当需兼容无 `branch`/`security_level` 字段的旧 Milvus 集合时，再在 `.env` 中设 `ENTERPRISE_ACL_ENABLED=false` 并处理向量数据迁移。
+- **文档**：[术语表与概念说明](docs/术语表与概念说明.md) 补充企业权限相关表字段说明。
+
 ## [0.4.0](https://github.com/uglyp/KB-Copilot/compare/v0.3.0...v0.4.0) (2026-03-31)
 
 

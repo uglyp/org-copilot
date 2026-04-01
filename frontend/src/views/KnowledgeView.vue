@@ -7,7 +7,10 @@ import type { AxiosError } from "axios";
 import { Picture } from "@element-plus/icons-vue";
 import { http } from "@/api/http";
 import type { DocumentOut, KnowledgeBaseOut } from "@/api/types";
+import { useAuthStore } from "@/stores/auth";
 import AiMarkdown from "@/components/ai/AiMarkdown.vue";
+
+const auth = useAuthStore();
 
 type DocPreviewMode = "image" | "pdf" | "text" | "markdown";
 
@@ -17,8 +20,27 @@ const docs = ref<DocumentOut[]>([]);
 const loading = ref(false);
 const uploadLoading = ref(false);
 
-const kbForm = ref({ name: "", description: "" });
+const kbForm = ref({
+  name: "",
+  description: "",
+  org_id: "",
+  is_org_shared: false,
+});
 const createKbVisible = ref(false);
+
+/** 上传文档时的权限元数据（与后端 Form 字段一致） */
+const uploadAcl = ref({
+  branch: "公共",
+  security_level: 1,
+  department: "",
+});
+
+const docSecurityLabels: Record<number, string> = {
+  1: "公开",
+  2: "内部",
+  3: "敏感",
+  4: "机密",
+};
 
 const previewVisible = ref(false);
 const previewLoading = ref(false);
@@ -28,6 +50,60 @@ const previewMode = ref<DocPreviewMode | null>(null);
 const previewTextContent = ref("");
 
 const activeKb = computed(() => kbs.value.find((k) => k.id === activeKbId.value));
+
+const editMetaVisible = ref(false);
+const editMetaSaving = ref(false);
+const editMetaForm = ref({
+  branch: "公共",
+  security_level: 1,
+  department: "",
+});
+const editMetaDocId = ref<number | null>(null);
+const editMetaFilename = ref("");
+
+function canEditDocMetadata(row: DocumentOut): boolean {
+  const me = auth.user?.id;
+  if (me == null || !activeKb.value) return false;
+  if (activeKb.value.user_id === me) return true;
+  return row.creator_user_id != null && row.creator_user_id === me;
+}
+
+function openEditDocMetadata(row: DocumentOut) {
+  if (!canEditDocMetadata(row)) return;
+  editMetaDocId.value = row.id;
+  editMetaFilename.value = row.filename;
+  editMetaForm.value = {
+    branch: row.branch || "公共",
+    security_level: row.security_level,
+    department: row.department ?? "",
+  };
+  editMetaVisible.value = true;
+}
+
+async function saveDocMetadata() {
+  if (!activeKbId.value || editMetaDocId.value == null) return;
+  editMetaSaving.value = true;
+  try {
+    await http.patch(
+      `/knowledge-bases/${activeKbId.value}/documents/${editMetaDocId.value}`,
+      {
+        branch: editMetaForm.value.branch.trim() || "公共",
+        security_level: editMetaForm.value.security_level,
+        department: editMetaForm.value.department.trim() || null,
+      },
+    );
+    ElMessage.success("已更新文档权限信息");
+    editMetaVisible.value = false;
+    await loadDocs();
+  } catch (e: unknown) {
+    const err = e as AxiosError<{ detail?: string }>;
+    const d = err.response?.data?.detail;
+    const msg = typeof d === "string" ? d : err.message || "保存失败";
+    ElMessage.error(msg);
+  } finally {
+    editMetaSaving.value = false;
+  }
+}
 
 function revokePreviewUrl() {
   if (previewObjectUrl.value) {
@@ -123,10 +199,21 @@ async function createKb() {
     ElMessage.warning("请填写知识库名称");
     return;
   }
-  await http.post("/knowledge-bases", kbForm.value);
+  const oid = kbForm.value.org_id.trim();
+  await http.post("/knowledge-bases", {
+    name: kbForm.value.name.trim(),
+    description: kbForm.value.description.trim() || null,
+    org_id: oid || null,
+    is_org_shared: kbForm.value.is_org_shared,
+  });
   ElMessage.success("已创建");
   createKbVisible.value = false;
-  kbForm.value = { name: "", description: "" };
+  kbForm.value = {
+    name: "",
+    description: "",
+    org_id: "",
+    is_org_shared: false,
+  };
   await loadKbs();
 }
 
@@ -145,6 +232,10 @@ async function onFileChange(uploadFile: UploadFile) {
   try {
     const fd = new FormData();
     fd.append("file", uploadFile.raw);
+    fd.append("branch", uploadAcl.value.branch.trim() || "公共");
+    fd.append("security_level", String(uploadAcl.value.security_level));
+    const dept = uploadAcl.value.department.trim();
+    if (dept) fd.append("department", dept);
     await http.post(`/knowledge-bases/${activeKbId.value}/documents`, fd);
     ElMessage.success("已上传，后台处理中");
     await loadDocs();
@@ -205,7 +296,15 @@ onMounted(loadKbs);
             @select="handleKbSelect"
           >
             <el-menu-item v-for="k in kbs" :key="k.id" :index="String(k.id)">
-              {{ k.name }}
+              <span class="kb-menu-label">{{ k.name }}</span>
+              <el-tag
+                v-if="k.is_org_shared"
+                size="small"
+                type="info"
+                class="!ml-1 !align-middle"
+              >
+                组织共享
+              </el-tag>
             </el-menu-item>
           </el-menu>
           <el-empty v-if="!kbs.length" description="暂无知识库" />
@@ -221,7 +320,32 @@ onMounted(loadKbs);
           文档 — {{ activeKb?.name || "未选择" }}
         </div>
         <div class="flex min-h-0 flex-1 flex-col p-4">
-          <div v-if="activeKbId" class="upload-row mb-3">
+          <div v-if="activeKbId" class="upload-block mb-3 space-y-2">
+            <el-collapse class="upload-acl-collapse">
+              <el-collapse-item title="上传时的文档权限（可选）" name="acl">
+                <el-form :model="uploadAcl" label-width="88px" size="small">
+                  <div class="grid gap-1 sm:grid-cols-2">
+                    <el-form-item label="分行标签" class="!mb-2">
+                      <el-input v-model="uploadAcl.branch" placeholder="默认「公共」" />
+                    </el-form-item>
+                    <el-form-item label="密级" class="!mb-2">
+                      <el-select v-model="uploadAcl.security_level" class="w-full">
+                        <el-option :value="1" label="1 公开" />
+                        <el-option :value="2" label="2 内部" />
+                        <el-option :value="3" label="3 敏感" />
+                        <el-option :value="4" label="4 机密" />
+                      </el-select>
+                    </el-form-item>
+                    <el-form-item label="限定部门" class="!mb-0 sm:col-span-2">
+                      <el-input
+                        v-model="uploadAcl.department"
+                        placeholder="留空不限部门；填写后需用户在「账户与权限」中包含该部门"
+                      />
+                    </el-form-item>
+                  </div>
+                </el-form>
+              </el-collapse-item>
+            </el-collapse>
             <el-upload
               :auto-upload="false"
               :show-file-list="false"
@@ -248,13 +372,25 @@ onMounted(loadKbs);
                 </div>
               </template>
             </el-table-column>
+            <el-table-column prop="branch" label="分行" width="100" show-overflow-tooltip />
+            <el-table-column label="密级" width="72">
+              <template #default="{ row }">
+                {{ docSecurityLabels[row.security_level] ?? row.security_level }}
+              </template>
+            </el-table-column>
+            <el-table-column
+              prop="department"
+              label="部门"
+              width="100"
+              show-overflow-tooltip
+            />
             <el-table-column prop="status" label="状态" width="120" />
             <el-table-column label="错误" min-width="160">
               <template #default="{ row }">
                 <span class="err">{{ row.error_message }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="148">
+            <el-table-column label="操作" width="220">
               <template #default="{ row }">
                 <div class="kb-actions-cell">
                   <el-button
@@ -264,6 +400,14 @@ onMounted(loadKbs);
                     @click="openDocPreview(row)"
                   >
                     预览
+                  </el-button>
+                  <el-button
+                    v-if="canEditDocMetadata(row)"
+                    link
+                    type="primary"
+                    @click="openEditDocMetadata(row)"
+                  >
+                    编辑权限
                   </el-button>
                   <el-button link type="danger" @click="removeDoc(row)">删除</el-button>
                 </div>
@@ -323,13 +467,56 @@ onMounted(loadKbs);
       </div>
     </el-dialog>
 
-    <el-dialog v-model="createKbVisible" title="新建知识库" width="420px">
-      <el-form label-width="80px">
+    <el-dialog
+      v-model="editMetaVisible"
+      :title="`编辑文档权限 — ${editMetaFilename}`"
+      width="480px"
+      destroy-on-close
+    >
+      <el-form :model="editMetaForm" label-width="88px">
+        <el-form-item label="分行标签">
+          <el-input v-model="editMetaForm.branch" placeholder="默认「公共」" />
+        </el-form-item>
+        <el-form-item label="密级">
+          <el-select v-model="editMetaForm.security_level" class="w-full">
+            <el-option :value="1" label="1 公开" />
+            <el-option :value="2" label="2 内部" />
+            <el-option :value="3" label="3 敏感" />
+            <el-option :value="4" label="4 机密" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="限定部门">
+          <el-input
+            v-model="editMetaForm.department"
+            placeholder="留空表示不限部门"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editMetaVisible = false">取消</el-button>
+        <el-button type="primary" :loading="editMetaSaving" @click="saveDocMetadata">
+          保存
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="createKbVisible" title="新建知识库" width="480px">
+      <el-form label-width="108px">
         <el-form-item label="名称">
           <el-input v-model="kbForm.name" />
         </el-form-item>
         <el-form-item label="描述">
           <el-input v-model="kbForm.description" type="textarea" rows="3" />
+        </el-form-item>
+        <el-form-item label="组织 ID">
+          <el-input
+            v-model="kbForm.org_id"
+            placeholder="与成员用户「组织 ID」一致时可共享；可留空"
+          />
+        </el-form-item>
+        <el-form-item label="组织共享">
+          <el-switch v-model="kbForm.is_org_shared" />
+          <span class="ml-2 text-xs text-slate-500">开启后同组织用户可访问本库</span>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -341,8 +528,23 @@ onMounted(loadKbs);
 </template>
 
 <style scoped>
-.upload-row {
+.upload-block {
   margin-bottom: 0;
+}
+.upload-acl-collapse {
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.upload-acl-collapse :deep(.el-collapse-item__header) {
+  padding-left: 12px;
+  font-size: 13px;
+}
+.upload-acl-collapse :deep(.el-collapse-item__content) {
+  padding: 12px;
+}
+.kb-menu-label {
+  vertical-align: middle;
 }
 .err {
   color: var(--el-color-danger);

@@ -8,7 +8,7 @@
 
 **English:** Self-hosted **multimodal RAG** with **SSE** chat — **FastAPI**, **Vue 3**, **MySQL** or **PostgreSQL**, **Milvus**; **PDF/text** + **images** (optional **PaddleOCR**); **fastembed** or **OpenAI-compatible** embeddings; chat via **DeepSeek**, **Ollama**, or compatible providers.
 
-**中文：** 以自托管为主，按 [多模态 RAG 路线图](docs/多模态RAG路线图.md) 持续扩展；当前为「知识库侧入库 + 文本向量检索 + 文本对话」闭环，企业级能力见下文「边界」。
+**中文：** 以自托管为主，按 [多模态 RAG 路线图](docs/多模态RAG路线图.md) 持续扩展；[产品功能开发阶段路线图](docs/产品功能开发阶段路线图.md) 汇总各阶段产品能力与验收要点。当前为「知识库侧入库 + 文本向量检索 + 文本对话」闭环，企业级能力见下文「边界」。
 
 ## 特性要点
 
@@ -99,7 +99,7 @@ flowchart LR
 完整分期:
 
 - **第一期 · 文本向量图像 RAG；**
-- **第二期 · CLIP 双通道；**
+- **第二期 · CLIP 双通道、权限管理；**
 - **第三期 · Agent / 评测 / 对话 / VLM；**
 
 下表为 **任务列表**。
@@ -110,10 +110,10 @@ flowchart LR
 - [x] **知识库与文档**：知识库管理；PDF/纯文本上传、解析、分块、入库；元数据入关系型库（MySQL / PostgreSQL）。
 - [x] **双数据库支持**：支持可配置MySQL / PostgreSQL。
 - [x] **多模态入库（第一期）**：位图上传 → **PaddleOCR** → 与同文档流水线分块/向量化（`uv sync --extra image`）；`modality` / `extra_json`；Caption 字段预留，**当前以 OCR 为主**。
-- [x] **向量与检索**：单一 Milvus **文本向量** collection；**fastembed** 或 OpenAI 兼容 **embedding**；查询为文本向量检索，可按知识库过滤。
+- [x] **向量与检索**：单一 Milvus **文本向量** collection；**fastembed** 或 OpenAI 兼容 **embedding**；查询为文本向量检索，可按知识库过滤；**默认开启企业 ACL**（Milvus 标量 + RAG 前文档校验，可 `.env` 关闭）。
 - [x] **RAG 对话**：拼上下文；图像块带 **`[图像/OCR]`**；**SSE**；**`citations_json`** 引用。
 - [x] **模型与集成**：多提供商；**DeepSeek** / **Ollama**；`.env` 可自动注入 Ollama；对话页切换模型（本地存储）。
-- [x] **前端**：会话列表、流式回答、检索进度、知识库与模型设置页。
+- [x] **前端**：会话列表、流式回答、检索进度、知识库（含文档权限元数据与组织共享）、**账户与权限**、模型设置页。
 
 ### 待实现与规划中
 
@@ -122,7 +122,7 @@ flowchart LR
 - [ ] **对话内传图 · VLM（§6）**：临时图片不入库；多模态 **messages**；与 RAG 同轮组合。
 - [ ] **第一期补强**：Caption、异步队列与失败重试、**BGE-M3** 等（**换模型须重建向量**）。
 - [ ] **更多模态（§8）**：视频（ASR/关键帧）、复杂 PDF 版式。
-- [ ] **企业级**：多租户、权限审计、SSO、配额、可观测性等（见「边界」）。
+- [ ] **企业级（部分已具备）**：文档/用户分行与密级、组织共享知识库、JWT 权限载荷、**无** SSO / 审计流水 / 配额等（见「边界」）。
 
 **分期摘要：** 已勾选项 ≈ 路线图 **第一期**；未勾选项覆盖第二、三期及补强。版本变更见 [`CHANGELOG.md`](CHANGELOG.md)。
 
@@ -134,7 +134,7 @@ flowchart LR
 ## 开源与协作
 
 - [贡献指南](CONTRIBUTING.md) · [安全披露](SECURITY.md) · [行为准则](CODE_OF_CONDUCT.md) · [变更记录](CHANGELOG.md)
-- [CHANGELOG 自动维护说明](docs/CHANGELOG_AUTOMATION.md) · [GitHub Description / Topics](docs/GITHUB_REPOSITORY_METADATA.md)
+- [产品功能开发阶段路线图](docs/产品功能开发阶段路线图.md) · [CHANGELOG 自动维护说明](docs/CHANGELOG_AUTOMATION.md) · [GitHub Description / Topics](docs/GITHUB_REPOSITORY_METADATA.md)
 - 许可证：[MIT](LICENSE)
 
 ---

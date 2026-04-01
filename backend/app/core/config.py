@@ -100,6 +100,11 @@ class Settings(BaseSettings):
     # 对话 RAG：向量召回条数（略大有利于「技术栈/语言」等分散在表格中的描述）
     rag_top_k: int = 12
 
+    # 企业 ACL：默认开启。为 true 时 Milvus 集合须含 branch/security_level 标量；旧向量库无此字段时需换新 MILVUS_COLLECTION 或清空后重入库。可设 false 退回仅 kb_id 过滤（不推荐生产）。
+    enterprise_acl_enabled: bool = True
+    # 与文档权限中「公共」分行标签一致，须与入库文档默认值一致
+    public_branch_label: str = "公共"
+
     upload_dir: str = "./data/uploads"
 
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]

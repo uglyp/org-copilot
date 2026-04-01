@@ -108,6 +108,8 @@ async def process_document_ingestion(session: AsyncSession, doc_id: int) -> None
                 "chunk_db_id": db_ids[i],
                 "filename": doc.filename,
                 "modality": chunk_modality,
+                "branch": doc.branch,
+                "security_level": int(doc.security_level),
             }
             for i, t in enumerate(parts)
         ]
