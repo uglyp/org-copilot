@@ -16,6 +16,14 @@
 - **企业 ACL**：`ENTERPRISE_ACL_ENABLED` 默认改为 **true**；RAG 拼上下文前**始终**按文档元数据做权限过滤（与知识库列表/下载一致）。仅当需兼容无 `branch`/`security_level` 字段的旧 Milvus 集合时，再在 `.env` 中设 `ENTERPRISE_ACL_ENABLED=false` 并处理向量数据迁移。
 - **文档**：[术语表与概念说明](docs/术语表与概念说明.md) 补充企业权限相关表字段说明。
 
+## [0.5.0](https://github.com/uglyp/KB-Copilot/compare/v0.4.0...v0.5.0) (2026-04-01)
+
+
+### 新增
+
+* add Gitee mirroring workflow ([0e0077c](https://github.com/uglyp/KB-Copilot/commit/0e0077c3acaba80ac17c7356d866b6c88f6b2897))
+* enhance user permissions and document management ([1b58877](https://github.com/uglyp/KB-Copilot/commit/1b58877cc14f3651cc18523bb7b2601ae5232a05))
+
 ## [0.4.0](https://github.com/uglyp/KB-Copilot/compare/v0.3.0...v0.4.0) (2026-03-31)
 
 
