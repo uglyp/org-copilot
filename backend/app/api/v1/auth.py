@@ -30,7 +30,6 @@ class RegisterBody(BaseModel):
     username: str = Field(min_length=2, max_length=64)
     password: str = Field(min_length=6, max_length=128)
     branch: str | None = Field(None, max_length=128)
-    role: str | None = Field(None, max_length=64)
     security_level: int | None = Field(None, ge=1, le=4)
     departments: list[str] | None = None
     org_id: str | None = Field(None, max_length=64)
@@ -56,10 +55,9 @@ class TokenResponse(BaseModel):
 
 
 class MePatchBody(BaseModel):
-    """更新当前用户权限相关字段；仅提交需要修改的键。"""
+    """更新当前用户权限相关字段；仅提交需要修改的键。角色仅可由管理员在系统管理中修改。"""
 
     branch: str | None = Field(None, max_length=128)
-    role: str | None = Field(None, max_length=64)
     security_level: int | None = Field(None, ge=1, le=4)
     departments: list[str] | None = None
     org_id: str | None = Field(None, max_length=64)
@@ -111,10 +109,9 @@ async def register(body: RegisterBody, db: AsyncSession = Depends(get_db)) -> To
     if r.scalar_one_or_none():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Username taken")
     user = User(username=body.username, hashed_password=hash_password(body.password))
+    user.role = "user"
     if body.branch is not None:
         user.branch = body.branch.strip() or "公共"
-    if body.role is not None:
-        user.role = body.role.strip() or "user"
     if body.security_level is not None:
         user.security_level = body.security_level
     if body.departments is not None:
@@ -136,6 +133,8 @@ async def login(body: LoginBody, db: AsyncSession = Depends(get_db)) -> TokenRes
     user = r.scalar_one_or_none()
     if not user or not verify_password(body.password, user.hashed_password):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    if not getattr(user, "is_active", True):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="账户已停用")
     await ensure_deepseek_auto_seed(db, user.id)
     await ensure_embedding_api_auto_seed(db, user.id)
     await ensure_ollama_chat_seed(db, user.id)
@@ -154,6 +153,7 @@ async def me(user: User = Depends(get_current_user)) -> dict:
         "security_level": ctx.security_level,
         "departments": list(ctx.departments),
         "org_id": ctx.org_id,
+        "is_active": bool(getattr(user, "is_active", True)),
     }
 
 
@@ -166,8 +166,6 @@ async def patch_me(
     data = body.model_dump(exclude_unset=True)
     if "branch" in data:
         user.branch = (data["branch"] or "").strip() or "公共"
-    if "role" in data:
-        user.role = (data["role"] or "").strip() or "user"
     if "security_level" in data:
         user.security_level = int(data["security_level"])
     if "departments" in data:

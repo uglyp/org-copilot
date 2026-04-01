@@ -21,8 +21,13 @@ from app.db.session import get_db
 
 from app.models.entities import Chunk, Document, KnowledgeBase, User
 from app.services.image_ingest import is_image_extension, verify_image_file
+from app.services.kb_purge import purge_knowledge_base
 from app.services.milvus_store import delete_by_doc_id, update_milvus_entities_acl_for_document
-from app.services.permissions import document_acl_filter, kb_access_filter
+from app.services.permissions import (
+    document_acl_filter,
+    is_user_admin,
+    kb_access_filter,
+)
 from app.workers.tasks import ingest_document_task
 
 router = APIRouter(prefix="/knowledge-bases", tags=["knowledge"])
@@ -35,6 +40,15 @@ class KBCreate(BaseModel):
     description: str | None = None
     org_id: str | None = Field(None, max_length=64)
     is_org_shared: bool = False
+
+
+class KBUpdate(BaseModel):
+    """属主更新知识库元数据；未传字段不变。"""
+
+    name: str | None = Field(None, max_length=256)
+    description: str | None = None
+    org_id: str | None = Field(None, max_length=64)
+    is_org_shared: bool | None = None
 
 
 class KBOut(BaseModel):
@@ -100,6 +114,53 @@ async def create_kb(
     return kb
 
 
+@router.patch("/{kb_id}", response_model=KBOut)
+async def patch_knowledge_base(
+    kb_id: int,
+    body: KBUpdate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> KnowledgeBase:
+    kb = await _require_kb_owner(db, kb_id, user)
+    data = body.model_dump(exclude_unset=True)
+    if not data:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="无更新字段",
+        )
+    if "name" in data:
+        nm = (data["name"] or "").strip()
+        if not nm:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail="名称不能为空",
+            )
+        kb.name = nm
+    if "description" in data:
+        desc = data["description"]
+        kb.description = desc.strip() if isinstance(desc, str) and desc.strip() else None
+    if "org_id" in data:
+        raw = data["org_id"]
+        kb.org_id = raw.strip() if isinstance(raw, str) and raw.strip() else None
+    if "is_org_shared" in data:
+        kb.is_org_shared = bool(data["is_org_shared"])
+    await db.commit()
+    await db.refresh(kb)
+    return kb
+
+
+@router.delete("/{kb_id}")
+async def delete_knowledge_base(
+    kb_id: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    kb = await _require_kb_owner(db, kb_id, user)
+    await purge_knowledge_base(db, kb.id)
+    await db.commit()
+    return {"status": "ok"}
+
+
 async def _get_kb(db: AsyncSession, kb_id: int, user: User) -> KnowledgeBase:
     r = await db.execute(
         select(KnowledgeBase).where(
@@ -113,8 +174,20 @@ async def _get_kb(db: AsyncSession, kb_id: int, user: User) -> KnowledgeBase:
     return kb
 
 
+async def _require_kb_owner(db: AsyncSession, kb_id: int, user: User) -> KnowledgeBase:
+    kb = await _get_kb(db, kb_id, user)
+    if not is_user_admin(user) and kb.user_id != user.id:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail="仅知识库属主或管理员可执行此操作",
+        )
+    return kb
+
+
 def _can_edit_document_metadata(kb: KnowledgeBase, doc: Document, user: User) -> bool:
-    """知识库属主或文档上传者可改密级/分行/部门。"""
+    """知识库属主、文档上传者或管理员可改密级/分行/部门。"""
+    if is_user_admin(user):
+        return True
     if kb.user_id == user.id:
         return True
     if doc.creator_user_id is not None and doc.creator_user_id == user.id:

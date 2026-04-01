@@ -21,6 +21,7 @@ from app.core.config import get_settings
 from app.models.entities import Chunk, LlmUsageRecord, Message, User
 from app.services.permissions import (
     document_visible_to,
+    is_user_admin,
     load_documents_for_acl_check,
 )
 from app.services.model_resolver import (
@@ -122,6 +123,8 @@ async def _filter_hits_by_document_acl(
     public_branch_label: str,
 ) -> list[dict[str, Any]]:
     """第三层：按关系库文档元数据过滤（分行/密级/部门）。与列表接口一致；Milvus 层 ACL 为额外收紧，不能替代本步。"""
+    if is_user_admin(acl_user):
+        return hits
     doc_ids: list[int] = []
     for h in hits:
         pl = h.get("payload") or {}

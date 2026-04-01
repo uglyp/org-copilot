@@ -111,6 +111,43 @@ class TestDocumentVisibleTo(unittest.TestCase):
             document_visible_to(doc, u2, public_branch_label="公共"),
         )
 
+    def test_admin_sees_any_document(self) -> None:
+        doc = Document(
+            id=1,
+            kb_id=1,
+            filename="f",
+            storage_path="/p",
+            branch="上海分行",
+            security_level=4,
+            department="风控部",
+        )
+        admin = User(
+            id=9,
+            username="adm",
+            hashed_password="h",
+            branch="公共",
+            role="admin",
+            security_level=1,
+            departments_json=[],
+        )
+        self.assertTrue(
+            document_visible_to(doc, admin, public_branch_label="公共"),
+        )
+
+
+class TestAdminMilvusFilter(unittest.TestCase):
+    def test_admin_filter_is_kb_only(self) -> None:
+        admin = User(
+            id=1,
+            username="a",
+            hashed_password="h",
+            branch="公共",
+            role="admin",
+            security_level=1,
+        )
+        s = build_milvus_acl_filter(42, admin, public_branch_label="公共")
+        self.assertEqual(s, "kb_id == 42")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -10,11 +10,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import and_, false, func, or_, select
+from sqlalchemy import and_, false, func, or_, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import ColumnElement
 
 from app.models.entities import Document, KnowledgeBase, User
+
+
+def is_user_admin(user: User) -> bool:
+    """系统管理员：启用账号且 `role` 为 admin（不区分大小写）。"""
+    # 未 flush 的 ORM 实例上 `is_active` 可能仍为 None，与列默认值 True 对齐
+    raw_active = getattr(user, "is_active", None)
+    active = True if raw_active is None else bool(raw_active)
+    return active and (user.role or "").strip().lower() == "admin"
 
 
 def default_public_branch_label() -> str:
@@ -87,6 +95,8 @@ def parse_departments_jwt_claim(raw: str | None) -> tuple[str, ...]:
 
 
 def knowledge_base_accessible(kb: KnowledgeBase, user: User) -> bool:
+    if is_user_admin(user):
+        return True
     if kb.user_id == user.id:
         return True
     if kb.is_org_shared and kb.org_id and user.org_id:
@@ -95,7 +105,9 @@ def knowledge_base_accessible(kb: KnowledgeBase, user: User) -> bool:
 
 
 def kb_access_filter(user: User) -> ColumnElement[bool]:
-    """当前用户可见的知识库：`owner` 或组织共享。"""
+    """当前用户可见的知识库：`owner` 或组织共享；管理员可见全部。"""
+    if is_user_admin(user):
+        return true()
     conds: list[ColumnElement[bool]] = [KnowledgeBase.user_id == user.id]
     uid_org = user.org_id.strip() if isinstance(user.org_id, str) and user.org_id.strip() else None
     if uid_org:
@@ -114,6 +126,8 @@ def document_visible_to(
     *,
     public_branch_label: str,
 ) -> bool:
+    if is_user_admin(user):
+        return True
     pub = public_branch_label.strip() or default_public_branch_label()
     ubranch = (user.branch or pub).strip() or pub
     dbranch = (doc.branch or pub).strip() or pub
@@ -139,7 +153,9 @@ def document_acl_filter(
     *,
     public_branch_label: str,
 ) -> ColumnElement[bool]:
-    """与 `document_visible_to` 等价的 SQL 条件（用于 list/download/delete）。"""
+    """与 `document_visible_to` 等价的 SQL 条件（用于 list/download/delete）；管理员不限。"""
+    if is_user_admin(user):
+        return true()
     pub = public_branch_label.strip() or default_public_branch_label()
     ubranch = (user.branch or pub).strip() or pub
 
@@ -175,7 +191,9 @@ def build_milvus_acl_filter(
     *,
     public_branch_label: str,
 ) -> str:
-    """拼接 Milvus 标量过滤表达式（不含部门）。"""
+    """拼接 Milvus 标量过滤表达式（不含部门）；管理员仅按 kb_id 检索全部分行/密级。"""
+    if is_user_admin(user):
+        return f"kb_id == {int(kb_id)}"
     pub = public_branch_label.strip() or default_public_branch_label()
     ubranch = escape_milvus_string(
         ((user.branch or pub).strip() or pub),

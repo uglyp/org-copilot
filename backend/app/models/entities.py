@@ -36,6 +36,7 @@ class User(Base):
     security_level: Mapped[int] = mapped_column(Integer, default=4)
     departments_json: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     org_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -277,3 +278,74 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class SysOrganization(Base):
+    """系统管理：组织（与 `User.org_id` / 知识库 `org_id` 字符串对齐）。"""
+
+    __tablename__ = "sys_organizations"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    org_code: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(256))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class SysBranch(Base):
+    """系统管理：分行/机构标签（与文档与用户 `branch` 字符串对齐）。"""
+
+    __tablename__ = "sys_branches"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    code: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(256))
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class SysDepartment(Base):
+    """系统管理：部门编码（与用户 `departments_json`、文档 `department` 对齐）。"""
+
+    __tablename__ = "sys_departments"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    code: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(256))
+    org_code: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class SysRole(Base):
+    """系统管理：角色标识（与 `User.role` 字符串对齐）。"""
+
+    __tablename__ = "sys_roles"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    code: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    display_name: Mapped[str] = mapped_column(String(128))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class SysSecurityLevel(Base):
+    """系统管理：密级展示名（业务仍使用 1～4 整数）。"""
+
+    __tablename__ = "sys_security_levels"
+
+    level: Mapped[int] = mapped_column(primary_key=True)
+    label: Mapped[str] = mapped_column(String(64))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)

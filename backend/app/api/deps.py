@@ -19,7 +19,7 @@ from app.core.config import get_settings
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.models.entities import User
-from app.services.permissions import PermissionContext
+from app.services.permissions import PermissionContext, is_user_admin
 from app.services.model_readiness import (
     is_chat_ready,
     is_embedding_ready,
@@ -44,6 +44,17 @@ async def get_current_user(
     user = r.scalar_one_or_none()
     if not user:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    if not getattr(user, "is_active", True):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="账户已停用")
+    return user
+
+
+async def require_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
+    if not is_user_admin(user):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail="需要管理员权限（用户角色为 admin）",
+        )
     return user
 
 
