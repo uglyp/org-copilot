@@ -1,7 +1,10 @@
 """
 知识库图片：校验格式 → PaddleOCR 抽中文/英文 → canonical 文本 + extra_json。
 
-未安装 `image` 可选依赖时，`ocr_image_to_canonical` 会抛出带说明的 `RuntimeError`。
+扫描类 PDF 在 `pdf_extract` 中渲染页面后复用同一套 PaddleOCR（见 `extract_pdf_text_hybrid`）。
+
+未安装 `image` 可选依赖时，`ocr_image_to_canonical` 会抛出带说明的 `RuntimeError`；
+PDF 仍可抽文字层，但扫描页几乎无字时需安装 `uv sync --extra image`。
 """
 
 from __future__ import annotations
