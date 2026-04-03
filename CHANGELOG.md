@@ -16,6 +16,13 @@
 - **企业 ACL**：`ENTERPRISE_ACL_ENABLED` 默认改为 **true**；RAG 拼上下文前**始终**按文档元数据做权限过滤（与知识库列表/下载一致）。仅当需兼容无 `branch`/`security_level` 字段的旧 Milvus 集合时，再在 `.env` 中设 `ENTERPRISE_ACL_ENABLED=false` 并处理向量数据迁移。
 - **文档**：[术语表与概念说明.md](术语表与概念说明.md) 补充企业权限相关表字段说明。
 
+## [0.7.0](https://github.com/uglyp/KB-Copilot/compare/v0.6.0...v0.7.0) (2026-04-03)
+
+
+### 新增
+
+* add RAG context budget verification script ([95acd91](https://github.com/uglyp/KB-Copilot/commit/95acd91790911ea6d145e54c6a43a5e81342cf15))
+
 ## [0.6.0](https://github.com/uglyp/KB-Copilot/compare/v0.5.0...v0.6.0) (2026-04-01)
 
 
