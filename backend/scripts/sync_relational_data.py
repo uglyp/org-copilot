@@ -12,8 +12,8 @@
 用法（在 backend 目录下）::
 
     uv run python scripts/sync_relational_data.py \\
-      --source-url 'mysql+pymysql://root:pass@127.0.0.1:3306/kb_copilot' \\
-      --target-url 'postgresql+psycopg://kbuser:pass@127.0.0.1:5432/kb_copilot' \\
+      --source-url 'mysql+pymysql://root:pass@127.0.0.1:3306/org_copilot' \\
+      --target-url 'postgresql+psycopg://kbuser:pass@127.0.0.1:5432/org_copilot' \\
       --truncate-target
 
 也可通过环境变量（便于与 CI/脚本集成）::

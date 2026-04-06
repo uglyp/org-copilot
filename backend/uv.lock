@@ -914,70 +914,6 @@ wheels = [
 ]
 
 [[package]]
-name = "kb-copilot-backend"
-version = "0.7.0"
-source = { editable = "." }
-dependencies = [
-    { name = "aiomysql" },
-    { name = "alembic" },
-    { name = "asyncpg" },
-    { name = "bcrypt" },
-    { name = "cryptography" },
-    { name = "fastapi" },
-    { name = "fastembed" },
-    { name = "greenlet" },
-    { name = "httpx" },
-    { name = "pillow" },
-    { name = "psycopg", extra = ["binary"] },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "pymilvus", extra = ["milvus-lite"] },
-    { name = "pymupdf" },
-    { name = "pymysql" },
-    { name = "python-dotenv" },
-    { name = "python-jose", extra = ["cryptography"] },
-    { name = "python-multipart" },
-    { name = "setuptools" },
-    { name = "sqlalchemy", extra = ["asyncio"] },
-    { name = "uvicorn", extra = ["standard"] },
-]
-
-[package.optional-dependencies]
-image = [
-    { name = "paddleocr" },
-    { name = "paddlepaddle" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiomysql", specifier = ">=0.2.0" },
-    { name = "alembic", specifier = ">=1.13.0" },
-    { name = "asyncpg", specifier = ">=0.29.0" },
-    { name = "bcrypt", specifier = ">=4.1.0" },
-    { name = "cryptography", specifier = ">=42.0.0" },
-    { name = "fastapi", specifier = ">=0.109.0" },
-    { name = "fastembed", specifier = ">=0.3.0" },
-    { name = "greenlet", specifier = ">=3.0.0" },
-    { name = "httpx", specifier = ">=0.26.0" },
-    { name = "paddleocr", marker = "extra == 'image'", specifier = ">=2.7.0,<3.0.0" },
-    { name = "paddlepaddle", marker = "extra == 'image'", specifier = ">=2.6.0" },
-    { name = "pillow", specifier = ">=10.0.0" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.1.0" },
-    { name = "pydantic", specifier = ">=2.5.0" },
-    { name = "pydantic-settings", specifier = ">=2.1.0" },
-    { name = "pymilvus", extras = ["milvus-lite"], specifier = ">=2.4.0" },
-    { name = "pymupdf", specifier = ">=1.24.0" },
-    { name = "pymysql", specifier = ">=1.1.0" },
-    { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "python-jose", extras = ["cryptography"], specifier = ">=3.3.0" },
-    { name = "python-multipart", specifier = ">=0.0.6" },
-    { name = "setuptools", specifier = ">=70.0.0,<81" },
-    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.25" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.27.0" },
-]
-provides-extras = ["image"]
-
-[[package]]
 name = "lazy-loader"
 version = "0.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1555,6 +1491,70 @@ sdist = { url = "https://files.pythonhosted.org/packages/7d/bf/9257e53a0e7715bc1
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bc/19/404708a7e54ad2798907210462fd950c3442ea51acc8790f3da48d2bee8b/opt_einsum-3.3.0-py3-none-any.whl", hash = "sha256:2455e59e3947d3c275477df7f5205b30635e266fe6dc300e3d9f9646bfcea147", size = 65486, upload-time = "2020-07-19T22:40:30.301Z" },
 ]
+
+[[package]]
+name = "org-copilot-backend"
+version = "0.7.0"
+source = { editable = "." }
+dependencies = [
+    { name = "aiomysql" },
+    { name = "alembic" },
+    { name = "asyncpg" },
+    { name = "bcrypt" },
+    { name = "cryptography" },
+    { name = "fastapi" },
+    { name = "fastembed" },
+    { name = "greenlet" },
+    { name = "httpx" },
+    { name = "pillow" },
+    { name = "psycopg", extra = ["binary"] },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "pymilvus", extra = ["milvus-lite"] },
+    { name = "pymupdf" },
+    { name = "pymysql" },
+    { name = "python-dotenv" },
+    { name = "python-jose", extra = ["cryptography"] },
+    { name = "python-multipart" },
+    { name = "setuptools" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.optional-dependencies]
+image = [
+    { name = "paddleocr" },
+    { name = "paddlepaddle" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiomysql", specifier = ">=0.2.0" },
+    { name = "alembic", specifier = ">=1.13.0" },
+    { name = "asyncpg", specifier = ">=0.29.0" },
+    { name = "bcrypt", specifier = ">=4.1.0" },
+    { name = "cryptography", specifier = ">=42.0.0" },
+    { name = "fastapi", specifier = ">=0.109.0" },
+    { name = "fastembed", specifier = ">=0.3.0" },
+    { name = "greenlet", specifier = ">=3.0.0" },
+    { name = "httpx", specifier = ">=0.26.0" },
+    { name = "paddleocr", marker = "extra == 'image'", specifier = ">=2.7.0,<3.0.0" },
+    { name = "paddlepaddle", marker = "extra == 'image'", specifier = ">=2.6.0" },
+    { name = "pillow", specifier = ">=10.0.0" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.1.0" },
+    { name = "pydantic", specifier = ">=2.5.0" },
+    { name = "pydantic-settings", specifier = ">=2.1.0" },
+    { name = "pymilvus", extras = ["milvus-lite"], specifier = ">=2.4.0" },
+    { name = "pymupdf", specifier = ">=1.24.0" },
+    { name = "pymysql", specifier = ">=1.1.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "python-jose", extras = ["cryptography"], specifier = ">=3.3.0" },
+    { name = "python-multipart", specifier = ">=0.0.6" },
+    { name = "setuptools", specifier = ">=70.0.0,<81" },
+    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.25" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.27.0" },
+]
+provides-extras = ["image"]
 
 [[package]]
 name = "orjson"

@@ -126,7 +126,7 @@ def main() -> int:
     blob = json.dumps(msgs, ensure_ascii=False)
     content_chars = sum(len(m.get("content", "")) for m in msgs)
 
-    print("=== KB-Copilot RAG 上下文粗测 ===\n")
+    print("=== OrgCopilot RAG 上下文粗测 ===\n")
     print(
         f"假设：top_k={top_k}，每块满 {args.chunk_chars} 字（中文），"
         f"历史 {args.history_turns} 轮 user+assistant，含当前问题。"

@@ -141,7 +141,7 @@ async def full_status(session: AsyncSession, user_id: int) -> dict[str, Any]:
     ):
         try:
             cfg = await resolve_default_embedding(session, user_id)
-            vecs, _ = await embed_texts(cfg, ["kb-copilot embedding probe"])
+            vecs, _ = await embed_texts(cfg, ["org-copilot embedding probe"])
             if vecs and vecs[0]:
                 probe_dim = len(vecs[0])
         except Exception as e:  # noqa: BLE001
@@ -199,7 +199,7 @@ async def admin_rebuild_embedding_index(session: AsyncSession, admin_user_id: in
 
     from app.services.openai_compat import embed_texts
 
-    vecs, _ = await embed_texts(cfg, ["kb-copilot rebuild dim probe"])
+    vecs, _ = await embed_texts(cfg, ["org-copilot rebuild dim probe"])
     if not vecs or not vecs[0]:
         raise ValueError("探测嵌入维度失败")
     dim = len(vecs[0])

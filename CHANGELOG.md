@@ -16,42 +16,42 @@
 - **企业 ACL**：`ENTERPRISE_ACL_ENABLED` 默认改为 **true**；RAG 拼上下文前**始终**按文档元数据做权限过滤（与知识库列表/下载一致）。仅当需兼容无 `branch`/`security_level` 字段的旧 Milvus 集合时，再在 `.env` 中设 `ENTERPRISE_ACL_ENABLED=false` 并处理向量数据迁移。
 - **文档**：[术语表与概念说明.md](术语表与概念说明.md) 补充企业权限相关表字段说明。
 
-## [0.7.0](https://github.com/uglyp/KB-Copilot/compare/v0.6.0...v0.7.0) (2026-04-03)
+## [0.7.0](https://github.com/uglyp/org-copilot/compare/v0.6.0...v0.7.0) (2026-04-03)
 
 
 ### 新增
 
-* add RAG context budget verification script ([95acd91](https://github.com/uglyp/KB-Copilot/commit/95acd91790911ea6d145e54c6a43a5e81342cf15))
+* add RAG context budget verification script ([95acd91](https://github.com/uglyp/org-copilot/commit/95acd91790911ea6d145e54c6a43a5e81342cf15))
 
-## [0.6.0](https://github.com/uglyp/KB-Copilot/compare/v0.5.0...v0.6.0) (2026-04-01)
-
-
-### 新增
-
-* implement ACL catalog and system management UI enhancements ([cc9860e](https://github.com/uglyp/KB-Copilot/commit/cc9860eee6e39f593434f0f10afb1b0e969c26f1))
-* implement system management features and user role enhancements ([00eea76](https://github.com/uglyp/KB-Copilot/commit/00eea76f696d55b85fc8931dde989b6b03128641))
-
-## [0.5.0](https://github.com/uglyp/KB-Copilot/compare/v0.4.0...v0.5.0) (2026-04-01)
+## [0.6.0](https://github.com/uglyp/org-copilot/compare/v0.5.0...v0.6.0) (2026-04-01)
 
 
 ### 新增
 
-* add Gitee mirroring workflow ([0e0077c](https://github.com/uglyp/KB-Copilot/commit/0e0077c3acaba80ac17c7356d866b6c88f6b2897))
-* enhance user permissions and document management ([1b58877](https://github.com/uglyp/KB-Copilot/commit/1b58877cc14f3651cc18523bb7b2601ae5232a05))
+* implement ACL catalog and system management UI enhancements ([cc9860e](https://github.com/uglyp/org-copilot/commit/cc9860eee6e39f593434f0f10afb1b0e969c26f1))
+* implement system management features and user role enhancements ([00eea76](https://github.com/uglyp/org-copilot/commit/00eea76f696d55b85fc8931dde989b6b03128641))
 
-## [0.4.0](https://github.com/uglyp/KB-Copilot/compare/v0.3.0...v0.4.0) (2026-03-31)
-
-
-### 新增
-
-* add dual database support for MySQL and PostgreSQL ([5122587](https://github.com/uglyp/KB-Copilot/commit/5122587d642a576992c43faee0c3dda391b05cbf))
-
-## [0.3.0](https://github.com/uglyp/KB-Copilot/compare/v0.2.0...v0.3.0) (2026-03-31)
+## [0.5.0](https://github.com/uglyp/org-copilot/compare/v0.4.0...v0.5.0) (2026-04-01)
 
 
 ### 新增
 
-* enhance MySQL connection handling in the backend ([c90c53b](https://github.com/uglyp/KB-Copilot/commit/c90c53b9d722a8cf427d3c39834f5ee3403f2e38))
+* add Gitee mirroring workflow ([0e0077c](https://github.com/uglyp/org-copilot/commit/0e0077c3acaba80ac17c7356d866b6c88f6b2897))
+* enhance user permissions and document management ([1b58877](https://github.com/uglyp/org-copilot/commit/1b58877cc14f3651cc18523bb7b2601ae5232a05))
+
+## [0.4.0](https://github.com/uglyp/org-copilot/compare/v0.3.0...v0.4.0) (2026-03-31)
+
+
+### 新增
+
+* add dual database support for MySQL and PostgreSQL ([5122587](https://github.com/uglyp/org-copilot/commit/5122587d642a576992c43faee0c3dda391b05cbf))
+
+## [0.3.0](https://github.com/uglyp/org-copilot/compare/v0.2.0...v0.3.0) (2026-03-31)
+
+
+### 新增
+
+* enhance MySQL connection handling in the backend ([c90c53b](https://github.com/uglyp/org-copilot/commit/c90c53b9d722a8cf427d3c39834f5ee3403f2e38))
 
 ## [0.2.0] - 2026-03-31
 

@@ -1,12 +1,12 @@
-# KB-Copilot / 知识库 Copilot
+# OrgCopilot（组织知识 Copilot）
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![CI](https://github.com/uglyp/KB-Copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/uglyp/KB-Copilot/actions/workflows/ci.yml)
+[![CI](https://github.com/uglyp/org-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/uglyp/org-copilot/actions/workflows/ci.yml)
 
 **本项目为学习项目，在不断试错，调优，迭代，终极目标是做出企业级的项目效果**
 
-**KB-Copilot** 是一套可 **自托管** 的 **知识库问答（RAG）** 与 **流式对话** 系统：支持 **PDF / 文本** 与 **图片（OCR）** 入库，**Milvus** 向量检索，**FastAPI** 后端与 **Vue 3** 前端，对话通过 **SSE** 推送；可对接 **Ollama**、**DeepSeek** 等 **OpenAI 兼容** 的对话与向量 API。适用于团队内部文档检索、合规敏感场景下的 **企业级访问控制（ACL）** 原型与扩展。
+**OrgCopilot** 是一套可 **自托管** 的 **知识库问答（RAG）** 与 **流式对话** 系统：支持 **PDF / 文本** 与 **图片（OCR）** 入库，**Milvus** 向量检索，**FastAPI** 后端与 **Vue 3** 前端，对话通过 **SSE** 推送；可对接 **Ollama**、**DeepSeek** 等 **OpenAI 兼容** 的对话与向量 API。适用于团队内部文档检索、合规敏感场景下的 **企业级访问控制（ACL）** 原型与扩展。
 
 **检索友好关键词（中文）：** 知识库、RAG、检索增强生成、向量数据库、Milvus、embedding、分块、引用溯源、多模态 OCR、企业权限、分行密级、JWT、FastAPI、Vue3、Vite、TypeScript、自托管、开源 MIT。
 
@@ -98,8 +98,8 @@ FastAPI · Vue 3 · Vite · TypeScript · MySQL / PostgreSQL · Alembic · Milvu
 **终端 1 — 后端**
 
 ```bash
-git clone https://github.com/uglyp/KB-Copilot.git
-cd KB-Copilot/backend
+git clone https://github.com/uglyp/org-copilot.git
+cd org-copilot/backend
 uv sync
 cp .env.example .env   # 编辑 DATABASE_URL、FERNET_KEY、JWT_SECRET 等
 uv run alembic upgrade head
@@ -109,7 +109,7 @@ uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 **终端 2 — 前端**
 
 ```bash
-cd KB-Copilot/frontend
+cd org-copilot/frontend
 npm install
 npm run dev
 ```
@@ -154,6 +154,8 @@ flowchart LR
 - [贡献指南](CONTRIBUTING.md) · [安全披露](SECURITY.md) · [行为准则](CODE_OF_CONDUCT.md) · [变更记录](CHANGELOG.md)
 - 许可证：[MIT](LICENSE)
 - **概念与术语**：[术语表与概念说明.md](术语表与概念说明.md)
+- **GitHub 仓库名**：**`org-copilot`**（展示名 **OrgCopilot**）。若你曾在本地克隆旧仓库名，请在 GitHub 上将仓库 **Rename** 为 `org-copilot` 后，执行：  
+  `git remote set-url origin https://github.com/uglyp/org-copilot.git`
 
 ---
 
@@ -168,7 +170,7 @@ flowchart LR
    - `DATABASE_URL`：**MySQL** 用 `mysql+aiomysql://...`；**PostgreSQL** 用 `postgresql+asyncpg://...`。特殊字符需 URL 编码。
    - `FERNET_KEY`：`uv run python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
    - `JWT_SECRET`：足够长的随机串。
-3. 建库示例：MySQL：`CREATE DATABASE IF NOT EXISTS kb_copilot CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`；PostgreSQL：`CREATE DATABASE kb_copilot;`
+3. 建库示例：MySQL：`CREATE DATABASE IF NOT EXISTS org_copilot CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`；PostgreSQL：`CREATE DATABASE org_copilot;`（若已有旧库 `kb_copilot`，可在 `DATABASE_URL` 中继续指向旧库名，无需强制迁移。）
 4. `uv run alembic upgrade head`（拉取新代码后若有多迁移需重跑）。
 5. `uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
 

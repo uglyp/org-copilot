@@ -73,12 +73,12 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "KB-Copilot"
+    app_name: str = "OrgCopilot"
     debug: bool = False
     api_v1_prefix: str = "/api/v1"
 
     database_url: str = (
-        "mysql+aiomysql://root:password@localhost:3306/kb_copilot"
+        "mysql+aiomysql://root:password@localhost:3306/org_copilot"
     )
     # 可选：mysql | postgresql，与 DATABASE_URL 前缀一致；不设则仅按 URL 推断
     relational_db: Literal["mysql", "postgresql"] | None = None

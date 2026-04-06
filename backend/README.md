@@ -1,4 +1,4 @@
-# KB-Copilot 后端
+# OrgCopilot 后端
 
 FastAPI 应用；依赖由 **`pyproject.toml`** 声明，**`uv.lock`** 锁定版本（**uv** 以此为准）。**`requirements.txt`** 为与 `pyproject.toml` **同步的简版列表**，供 **`pip install -r`** 使用（无哈希、无传递依赖展开，便于阅读与非 uv 环境）。
 

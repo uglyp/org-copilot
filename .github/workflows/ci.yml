@@ -18,11 +18,11 @@ jobs:
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
-          POSTGRES_DB: kb_copilot
+          POSTGRES_DB: org_copilot
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U test -d kb_copilot"
+          --health-cmd "pg_isready -U test -d org_copilot"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -36,14 +36,14 @@ jobs:
         run: uv run python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Alembic upgrade (PostgreSQL)
         env:
-          DATABASE_URL: postgresql+asyncpg://test:test@127.0.0.1:5432/kb_copilot
+          DATABASE_URL: postgresql+asyncpg://test:test@127.0.0.1:5432/org_copilot
           RELATIONAL_DB: postgresql
         run: uv run alembic upgrade head
       - name: Import app
         env:
-          DATABASE_URL: postgresql+asyncpg://test:test@127.0.0.1:5432/kb_copilot
+          DATABASE_URL: postgresql+asyncpg://test:test@127.0.0.1:5432/org_copilot
           RELATIONAL_DB: postgresql
-        run: uv run python -c "from app.main import app; assert app.title == 'KB-Copilot'"
+        run: uv run python -c "from app.main import app; assert app.title == 'OrgCopilot'"
 
   backend-mysql:
     runs-on: ubuntu-latest
@@ -55,7 +55,7 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: test
-          MYSQL_DATABASE: kb_copilot
+          MYSQL_DATABASE: org_copilot
         ports:
           - 3306:3306
         options: >-
@@ -73,14 +73,14 @@ jobs:
         run: uv run python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Alembic upgrade (MySQL)
         env:
-          DATABASE_URL: "mysql+aiomysql://root:test@127.0.0.1:3306/kb_copilot?allow_public_key_retrieval=true"
+          DATABASE_URL: "mysql+aiomysql://root:test@127.0.0.1:3306/org_copilot?allow_public_key_retrieval=true"
           RELATIONAL_DB: mysql
         run: uv run alembic upgrade head
       - name: Import app
         env:
-          DATABASE_URL: "mysql+aiomysql://root:test@127.0.0.1:3306/kb_copilot?allow_public_key_retrieval=true"
+          DATABASE_URL: "mysql+aiomysql://root:test@127.0.0.1:3306/org_copilot?allow_public_key_retrieval=true"
           RELATIONAL_DB: mysql
-        run: uv run python -c "from app.main import app; assert app.title == 'KB-Copilot'"
+        run: uv run python -c "from app.main import app; assert app.title == 'OrgCopilot'"
 
   frontend:
     runs-on: ubuntu-latest

@@ -3,9 +3,9 @@ requires = ["hatchling>=1.24.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "kb-copilot-backend"
+name = "org-copilot-backend"
 version = "0.7.0"
-description = "KB-Copilot FastAPI backend (RAG / knowledge base)"
+description = "OrgCopilot FastAPI backend (RAG / knowledge base)"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.109.0",

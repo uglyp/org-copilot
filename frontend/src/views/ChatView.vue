@@ -37,7 +37,9 @@ type ChatMsg = { role: "user" | "assistant"; content: string };
 
 type StreamPhase = "embedding" | "searching" | "generating";
 
-const CHAT_MODEL_LS = "kb_copilot_chat_model_id";
+const CHAT_MODEL_LS = "org_copilot_chat_model_id";
+/** 旧版 localStorage 键，启动时迁移至 CHAT_MODEL_LS */
+const LEGACY_CHAT_MODEL_LS = "kb_copilot_chat_model_id";
 
 const auth = useAuthStore();
 const kbs = ref<KnowledgeBaseOut[]>([]);
@@ -241,6 +243,11 @@ async function loadConvs() {
 
 async function loadChatModels() {
   try {
+    const legacy = localStorage.getItem(LEGACY_CHAT_MODEL_LS);
+    if (legacy && !localStorage.getItem(CHAT_MODEL_LS)) {
+      localStorage.setItem(CHAT_MODEL_LS, legacy);
+      localStorage.removeItem(LEGACY_CHAT_MODEL_LS);
+    }
     const { data } = await http.get<ChatModelOptionOut[]>("/me/chat-models");
     chatModels.value = data;
     const saved = localStorage.getItem(CHAT_MODEL_LS);
