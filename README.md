@@ -1,12 +1,10 @@
 # OrgCopilot
 
-**自托管的企业级知识库 RAG 与流式对话系统** — 数据与向量在本地或专有云，对话与检索可带 **引用溯源**；面向 **ToB / 政企** 场景强化 **权限（ACL）** 与可演进路线（**RAG → 可治理 Agent**）。
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![CI](https://github.com/uglyp/org-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/uglyp/org-copilot/actions/workflows/ci.yml)
 
-**English:** Self-hosted **multimodal RAG** knowledge base with **SSE** streaming chat, **Milvus** vector search, **FastAPI** + **Vue 3**, optional **PaddleOCR** for images, **fastembed** or OpenAI-compatible embeddings, and **OpenAI-compatible** chat APIs (e.g. **Ollama**, **DeepSeek**). Enterprise-style **ACL** included; product direction: **LangChain / LangGraph** for tools, HITL, and checkpoints — see [`docs/product/`](docs/product/).
+**自托管的企业级知识库 RAG 与流式对话系统** — 数据与向量在本地或专有云，对话与检索可带 **引用溯源**；面向 **ToB / 政企** 场景强化 **权限（ACL）** 与可演进路线（**RAG → 可治理 Agent**）。
 
 ---
 
@@ -17,7 +15,7 @@
 | **可追溯** | 回答可附带 **citations**，便于核对来源，降低「空口回答」风险。 |
 | **权限与组织** | 文档级 **ACL**（分行、部门、密级等）与 Milvus 检索过滤、返回前二次校验；支持组织内知识库共享。 |
 | **模型与部署** | Chat / Embedding 走 **OpenAI 兼容 HTTP**，便于国产、海外与 **私有化** 模型统一接入。 |
-| **演进路线清晰** | 当前为 **线性 RAG 管道**；规划中将 **检索工具化**，并引入 **LangGraph**（检查点、人机在环、暂停恢复）— 见 [`docs/product/PRODUCT_PLAN.md`](docs/product/PRODUCT_PLAN.md)。 |
+| **演进路线清晰** | 当前为 **线性 RAG 管道**；规划中将 **检索工具化**，并引入 **LangGraph**（检查点、人机在环、暂停恢复）。 |
 
 ---
 
@@ -26,9 +24,9 @@
 - **知识库**：PDF / 文本上传，解析、分块、向量化；可选 **图片 OCR**（`uv sync --extra image`）进入同一文本向量流水线。
 - **对话**：多会话、**SSE** 流式输出、检索阶段展示、**引用列表**；多 chat 模型切换。
 - **向量检索**：**Milvus**（默认 **Milvus Lite** 本地文件，可换独立服务）；**fastembed** 或远程 embedding。
-- **账户与系统**：注册登录、JWT、忘记密码；管理员维护用户 / 组织 / ACL 字典等（见代码与 [`docs/系统管理与管理员数据权限.md`](docs/系统管理与管理员数据权限.md)）。
+- **账户与系统**：注册登录、JWT、忘记密码；管理员维护用户 / 组织 / ACL 字典等。
 
-**未实现 / 规划中**（摘录）：双通道 CLIP 融合、对话内 VLM、完整审计流水与 SSO 等 — 以仓库代码及 [`docs/product/PRD.md`](docs/product/PRD.md) 为准。
+**未实现 / 规划中**（摘录）：双通道 CLIP 融合、对话内 VLM、完整审计流水与 SSO 等 — 以仓库代码为准。
 
 ---
 
@@ -115,22 +113,6 @@ flowchart LR
 
 ---
 
-## 文档与路线图
-
-| 文档 | 内容 |
-|------|------|
-| [`docs/product/README.md`](docs/product/README.md) | 产品文档索引 |
-| [`docs/product/PRD.md`](docs/product/PRD.md) | 产品需求（功能 / 非功能 / 优先级） |
-| [`docs/product/PRODUCT_PLAN.md`](docs/product/PRODUCT_PLAN.md) | 产品规划与形态演进 |
-| [`docs/product/ITERATION_ROADMAP.md`](docs/product/ITERATION_ROADMAP.md) | 分阶段迭代路线 |
-| [`docs/本地开发与Ollama.md`](docs/本地开发与Ollama.md) | 本地开发、Ollama、环境变量 |
-| [`docs/CHANGELOG_AUTOMATION.md`](docs/CHANGELOG_AUTOMATION.md) | Release Please 与发版说明 |
-| [`docs/术语表与概念说明.md`](docs/术语表与概念说明.md) | 术语与缩写 |
-
-发版记录：**[CHANGELOG.md](CHANGELOG.md)**。
-
----
-
 ## 详细配置
 
 ### 后端（`backend/`）
@@ -163,8 +145,6 @@ CREATE DATABASE org_copilot;
 cd backend && uv sync --extra image
 ```
 
-详见 [`docs/多模态RAG路线图.md`](docs/多模态RAG路线图.md) 与 [`docs/本地开发与Ollama.md`](docs/本地开发与Ollama.md)。
-
 ---
 
 ## 适合场景与边界
@@ -182,13 +162,3 @@ cd backend && uv sync --extra image
 | [SECURITY.md](SECURITY.md) | 安全披露 |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | 行为准则 |
 | [LICENSE](LICENSE) | **MIT** |
-
-**仓库重命名**：若远程已改为 `org-copilot`，执行：
-
-`git remote set-url origin https://github.com/uglyp/org-copilot.git`
-
----
-
-## GitHub 仓库展示（简介与 Topics）
-
-在仓库 **About** 中可填写与 [`docs/GITHUB_REPOSITORY_METADATA.md`](docs/GITHUB_REPOSITORY_METADATA.md) 同步的 **Description** 与 **Topics**，便于搜索与发现。
