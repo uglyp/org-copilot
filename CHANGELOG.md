@@ -16,6 +16,18 @@
 - **企业 ACL**：`ENTERPRISE_ACL_ENABLED` 默认改为 **true**；RAG 拼上下文前**始终**按文档元数据做权限过滤（与知识库列表/下载一致）。仅当需兼容无 `branch`/`security_level` 字段的旧 Milvus 集合时，再在 `.env` 中设 `ENTERPRISE_ACL_ENABLED=false` 并处理向量数据迁移。
 - **文档**：[术语表与概念说明.md](术语表与概念说明.md) 补充企业权限相关表字段说明。
 
+## [0.8.0](https://github.com/uglyp/org-copilot/uglyp/org-copilot/compare/v0.7.0...v0.8.0) (2026-04-06)
+
+
+### 新增
+
+* implement embedding index management and status API ([b0cf6f0](https://github.com/uglyp/org-copilot/uglyp/org-copilot/commit/b0cf6f0466a45723d1ae5c051cf51389ef36c2c8))
+
+
+### 文档
+
+* update README to include project goals and description ([c06277e](https://github.com/uglyp/org-copilot/uglyp/org-copilot/commit/c06277eac5c09db61f62c4ac859ab2255e10d485))
+
 ## [0.7.0](https://github.com/uglyp/org-copilot/compare/v0.6.0...v0.7.0) (2026-04-03)
 
 
