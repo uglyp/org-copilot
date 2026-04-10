@@ -52,6 +52,7 @@ const messages = ref<ChatMsg[]>([]);
 const inputText = ref("");
 const sending = ref(false);
 const streamPhase = ref<StreamPhase | null>(null);
+const latestRequestId = ref("");
 
 const selectedChatModelKey = ref("");
 const chatModels = ref<ChatModelOptionOut[]>([]);
@@ -393,30 +394,38 @@ async function sendMessage(text?: string) {
         streamBody.chat_model_id = mid;
       }
     }
-    await postMessageStream(url, token, streamBody, (ev: SsePayload) => {
-      const last = messages.value[assistantIdx];
-      if (!last || last.role !== "assistant") return;
+    await postMessageStream(
+      url,
+      token,
+      streamBody,
+      (ev: SsePayload) => {
+        const last = messages.value[assistantIdx];
+        if (!last || last.role !== "assistant") return;
 
-      if (ev.type === "token" && ev.content) {
-        streamPhase.value = "generating";
-        acc += ev.content;
-        last.content = acc;
-      } else if (ev.type === "status") {
-        const phase = (ev as { phase?: string }).phase;
-        if (phase === "embedding") streamPhase.value = "embedding";
-        else if (phase === "searching") streamPhase.value = "searching";
-        else if (phase === "generating") streamPhase.value = "generating";
-        /* 进度由 ThoughtChain 展示，勿再写入 assistant 文案，避免与占位区重复 */
-        if (!acc) last.content = "";
-      } else if (ev.type === "done") {
-        const done = ev as SseDone;
-        acc = done.full_text || acc;
-        last.content = acc;
-        streamPhase.value = "generating";
-      } else if (ev.type === "error") {
-        last.content = `错误：${(ev as { code?: string }).code ?? "对话出错"}`;
+        if (ev.type === "token" && ev.content) {
+          streamPhase.value = "generating";
+          acc += ev.content;
+          last.content = acc;
+        } else if (ev.type === "status") {
+          const phase = (ev as { phase?: string }).phase;
+          if (phase === "embedding") streamPhase.value = "embedding";
+          else if (phase === "searching") streamPhase.value = "searching";
+          else if (phase === "generating") streamPhase.value = "generating";
+          /* 进度由 ThoughtChain 展示，勿再写入 assistant 文案，避免与占位区重复 */
+          if (!acc) last.content = "";
+        } else if (ev.type === "done") {
+          const done = ev as SseDone;
+          acc = done.full_text || acc;
+          last.content = acc;
+          streamPhase.value = "generating";
+        } else if (ev.type === "error") {
+          last.content = `错误：${(ev as { code?: string }).code ?? "对话出错"}`;
+        }
+      },
+      ({ requestId }) => {
+        latestRequestId.value = requestId;
       }
-    });
+    );
   } catch (e) {
     const last = messages.value[assistantIdx];
     if (last?.role === "assistant") {

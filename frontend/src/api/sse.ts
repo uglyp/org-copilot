@@ -23,12 +23,16 @@ export interface SseStatus {
 }
 
 export type SsePayload = SseToken | SseDone | SseError | SseStatus;
+export interface SseOpenMeta {
+  requestId: string;
+}
 
 export async function postMessageStream(
   url: string,
   token: string,
   body: { content: string; chat_model_id?: number },
-  onEvent: (ev: SsePayload) => void
+  onEvent: (ev: SsePayload) => void,
+  onOpen?: (meta: SseOpenMeta) => void
 ): Promise<void> {
   const res = await fetch(url, {
     method: "POST",
@@ -43,6 +47,7 @@ export async function postMessageStream(
     const text = await res.text();
     throw new Error(text || `HTTP ${res.status}`);
   }
+  onOpen?.({ requestId: res.headers.get("X-Request-ID") ?? "" });
 
   const reader = res.body?.getReader();
   if (!reader) throw new Error("无响应流");

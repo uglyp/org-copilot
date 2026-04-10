@@ -7,7 +7,7 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
@@ -129,11 +129,13 @@ async def delete_conversation(
 
 @router.post("/{conversation_id}/messages")
 async def post_message(
+    request: Request,
     conversation_id: int,
     body: MessageBody,
     user: User = Depends(require_chat_ready),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
+    request_id = getattr(request.state, "request_id", "")
     conv = await _get_conv(db, conversation_id, user.id)
     if body.chat_model_id is not None:
         if not await resolve_chat_model(db, user.id, body.chat_model_id):
@@ -162,6 +164,7 @@ async def post_message(
             user_message_id=um.id,
             acl_user=user,
             chat_model_id=body.chat_model_id,
+            request_id=request_id or None,
         ):
             yield chunk
 
@@ -172,5 +175,6 @@ async def post_message(
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
+            "X-Request-ID": request_id,
         },
     )

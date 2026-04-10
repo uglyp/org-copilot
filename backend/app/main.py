@@ -9,12 +9,15 @@ Python Web 常见结构：
 与前端的关系：Vite 开发服（如 :5173）与后端（:8000）不同源，故需 CORS 放行前端 Origin。
 """
 
-from fastapi import FastAPI
+import uuid
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.hf_env import configure_hf_hub_env
+from app.core.request_context import set_request_id
 
 # 在任意可能 import huggingface / fastembed 之前设置镜像与超时（见 hf_env 模块说明）
 configure_hf_hub_env()
@@ -28,7 +31,19 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Request-ID"],
 )
+
+
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):
+    """读取或生成 request_id，并透传到响应头与上下文。"""
+    req_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    request.state.request_id = req_id
+    set_request_id(req_id)
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = req_id
+    return response
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
 
