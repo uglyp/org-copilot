@@ -6,6 +6,8 @@
 """
 
 from typing import Any
+from datetime import datetime, timezone
+import json
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
@@ -155,6 +157,20 @@ async def post_message(
     async def gen():
         # 立即写出首字节，避免客户端/反向代理在首包前长时间显示「无响应」
         yield ": sse\n\n"
+        yield (
+            "data: "
+            + json.dumps(
+                {
+                    "type": "meta",
+                    "request_id": request_id,
+                    "conversation_id": conv.id,
+                    "chat_model_id": body.chat_model_id,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+                ensure_ascii=False,
+            )
+            + "\n\n"
+        )
         async for chunk in stream_chat_reply(
             db,
             user_id=user.id,

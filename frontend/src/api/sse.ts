@@ -9,6 +9,10 @@ export interface SseDone {
   citations: Array<Record<string, unknown>>;
   full_text: string;
   message_id: number;
+  request_id?: string;
+  conversation_id?: number;
+  chat_model_id?: number | null;
+  timestamp?: string;
 }
 
 export interface SseError {
@@ -22,7 +26,15 @@ export interface SseStatus {
   phase: string;
 }
 
-export type SsePayload = SseToken | SseDone | SseError | SseStatus;
+export interface SseMeta {
+  type: "meta";
+  request_id: string;
+  conversation_id: number;
+  chat_model_id?: number | null;
+  timestamp: string;
+}
+
+export type SsePayload = SseToken | SseDone | SseError | SseStatus | SseMeta;
 export interface SseOpenMeta {
   requestId: string;
 }

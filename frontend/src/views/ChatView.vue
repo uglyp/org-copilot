@@ -36,6 +36,12 @@ import { messageFromHttpBody } from "@/utils/chatError";
 type ChatMsg = { role: "user" | "assistant"; content: string };
 
 type StreamPhase = "embedding" | "searching" | "generating";
+type DiagnosticMeta = {
+  requestId: string;
+  conversationId: number | null;
+  chatModelId: number | null;
+  timestamp: string;
+};
 
 const CHAT_MODEL_LS = "org_copilot_chat_model_id";
 /** 旧版 localStorage 键，启动时迁移至 CHAT_MODEL_LS */
@@ -53,6 +59,12 @@ const inputText = ref("");
 const sending = ref(false);
 const streamPhase = ref<StreamPhase | null>(null);
 const latestRequestId = ref("");
+const latestDiagnostic = ref<DiagnosticMeta>({
+  requestId: "",
+  conversationId: null,
+  chatModelId: null,
+  timestamp: "",
+});
 
 const selectedChatModelKey = ref("");
 const chatModels = ref<ChatModelOptionOut[]>([]);
@@ -378,6 +390,12 @@ async function sendMessage(text?: string) {
   messages.value.push({ role: "user", content: raw });
   messages.value.push({ role: "assistant", content: "" });
   const assistantIdx = messages.value.length - 1;
+  latestDiagnostic.value = {
+    requestId: "",
+    conversationId: convId,
+    chatModelId: null,
+    timestamp: "",
+  };
 
   const url = `${getApiBaseForFetch()}/conversations/${convId}/messages`;
   sending.value = true;
@@ -420,10 +438,23 @@ async function sendMessage(text?: string) {
           streamPhase.value = "generating";
         } else if (ev.type === "error") {
           last.content = `错误：${(ev as { code?: string }).code ?? "对话出错"}`;
+        } else if (ev.type === "meta") {
+          latestDiagnostic.value = {
+            requestId: ev.request_id ?? latestRequestId.value,
+            conversationId: ev.conversation_id ?? convId,
+            chatModelId: ev.chat_model_id ?? null,
+            timestamp: ev.timestamp ?? "",
+          };
+          latestRequestId.value = ev.request_id ?? latestRequestId.value;
         }
       },
       ({ requestId }) => {
         latestRequestId.value = requestId;
+        latestDiagnostic.value = {
+          ...latestDiagnostic.value,
+          requestId,
+          timestamp: latestDiagnostic.value.timestamp || new Date().toISOString(),
+        };
       }
     );
   } catch (e) {
@@ -435,6 +466,25 @@ async function sendMessage(text?: string) {
   } finally {
     sending.value = false;
     streamPhase.value = null;
+  }
+}
+
+async function copyDiagnosticInfo() {
+  if (!latestDiagnostic.value.requestId) {
+    ElMessage.warning("当前会话暂无可复制的诊断信息");
+    return;
+  }
+  const payload = {
+    request_id: latestDiagnostic.value.requestId,
+    conversation_id: latestDiagnostic.value.conversationId,
+    chat_model_id: latestDiagnostic.value.chatModelId,
+    timestamp: latestDiagnostic.value.timestamp || new Date().toISOString(),
+  };
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+    ElMessage.success("诊断信息已复制");
+  } catch {
+    ElMessage.error("复制失败，请检查浏览器剪贴板权限");
   }
 }
 
@@ -534,14 +584,24 @@ onUnmounted(() => {
         class="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm lg:col-span-8"
       >
         <div class="border-b border-border px-4 py-3">
-          <div v-if="activeConv" class="text-sm font-medium text-foreground">
-            会话 <span class="font-semibold">#{{ activeConv.id }}</span>
-            <span class="ml-2 text-muted-foreground"
-              >· 知识库 {{ activeConv.kb_id }}</span
+          <div class="flex items-center justify-between gap-2">
+            <div v-if="activeConv" class="text-sm font-medium text-foreground">
+              会话 <span class="font-semibold">#{{ activeConv.id }}</span>
+              <span class="ml-2 text-muted-foreground"
+                >· 知识库 {{ activeConv.kb_id }}</span
+              >
+            </div>
+            <div v-else class="text-sm text-muted-foreground">
+              请选择或创建会话
+            </div>
+            <el-button
+              size="small"
+              text
+              :disabled="!latestDiagnostic.requestId"
+              @click="copyDiagnosticInfo"
             >
-          </div>
-          <div v-else class="text-sm text-muted-foreground">
-            请选择或创建会话
+              复制诊断信息
+            </el-button>
           </div>
         </div>
 
