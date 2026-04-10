@@ -16,6 +16,22 @@
 - **企业 ACL**：`ENTERPRISE_ACL_ENABLED` 默认改为 **true**；RAG 拼上下文前**始终**按文档元数据做权限过滤（与知识库列表/下载一致）。仅当需兼容无 `branch`/`security_level` 字段的旧 Milvus 集合时，再在 `.env` 中设 `ENTERPRISE_ACL_ENABLED=false` 并处理向量数据迁移。
 - **文档**：[术语表与概念说明.md](术语表与概念说明.md) 补充企业权限相关表字段说明。
 
+## [0.9.0](https://github.com/uglyp/org-copilot/uglyp/org-copilot/compare/v0.8.0...v0.9.0) (2026-04-10)
+
+
+### 新增
+
+* enhance chat model management and local storage integration ([10b484c](https://github.com/uglyp/org-copilot/uglyp/org-copilot/commit/10b484c84ecf9ccd3e8127a9af5f25fc950e4832))
+* 完成会话路由化能力 ([7c4403b](https://github.com/uglyp/org-copilot/uglyp/org-copilot/commit/7c4403b64c4a191e0709bedd288ff4055bc8396b))
+* 完成流式诊断信息透传 ([8bc1be2](https://github.com/uglyp/org-copilot/uglyp/org-copilot/commit/8bc1be2a1478581d53a2e3cb2a124cca8bf04ee8))
+* 打通请求链路标识 ([949691f](https://github.com/uglyp/org-copilot/uglyp/org-copilot/commit/949691f990a90e345df5bcef4b755666fc6ecd82))
+
+
+### 文档
+
+* refine README for clarity and conciseness ([b38a46d](https://github.com/uglyp/org-copilot/uglyp/org-copilot/commit/b38a46d9795054985ceeb9a832fbad3b8c9163d9))
+* update README for project clarity and feature overview ([7adc7a7](https://github.com/uglyp/org-copilot/uglyp/org-copilot/commit/7adc7a78185258b5052edefa04e1880b582440e3))
+
 ## [0.8.0](https://github.com/uglyp/org-copilot/uglyp/org-copilot/compare/v0.7.0...v0.8.0) (2026-04-06)
 
 
