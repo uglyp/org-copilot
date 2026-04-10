@@ -12,6 +12,7 @@ import {
   ref,
   watch,
 } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { Delete } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox, ElScrollbar } from "element-plus";
 import {
@@ -48,6 +49,8 @@ const CHAT_MODEL_LS = "org_copilot_chat_model_id";
 const LEGACY_CHAT_MODEL_LS = "kb_copilot_chat_model_id";
 
 const auth = useAuthStore();
+const route = useRoute();
+const router = useRouter();
 const kbs = ref<KnowledgeBaseOut[]>([]);
 const convs = ref<ConversationOut[]>([]);
 const activeConvId = ref<number | null>(null);
@@ -308,9 +311,10 @@ async function createConv() {
     title: null,
   });
   convs.value.unshift(data);
-  activeConvId.value = data.id;
-  activeConv.value = data;
-  clearChat();
+  await router.replace({
+    name: "chat",
+    params: { conversationId: String(data.id) },
+  });
 }
 
 async function selectConv(id: number) {
@@ -321,7 +325,7 @@ async function selectConv(id: number) {
 
 async function onConversationChange(item: Record<string, unknown>) {
   const id = item.id as number;
-  await selectConv(id);
+  await router.push({ name: "chat", params: { conversationId: String(id) } });
 }
 
 async function onConversationMenuCommand(
@@ -346,14 +350,61 @@ async function deleteConv(id: number) {
     convs.value = convs.value.filter((c) => c.id !== id);
     ElMessage.success("已删除");
     if (activeConvId.value === id) {
-      activeConvId.value = null;
-      activeConv.value = null;
-      clearChat();
+      if (convs.value.length) {
+        await router.replace({
+          name: "chat",
+          params: { conversationId: String(convs.value[0].id) },
+        });
+      } else {
+        await router.replace({ name: "chat" });
+        activeConvId.value = null;
+        activeConv.value = null;
+        clearChat();
+      }
     }
   } catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
     ElMessage.error(`删除失败：${messageFromHttpBody(raw)}`);
   }
+}
+
+function parseRouteConversationId(): number | null {
+  const raw = route.params.conversationId;
+  const str = Array.isArray(raw) ? raw[0] : raw;
+  if (!str) return null;
+  const id = Number(str);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+async function syncConversationFromRoute() {
+  if (!convs.value.length) {
+    activeConvId.value = null;
+    activeConv.value = null;
+    clearChat();
+    return;
+  }
+
+  const routeId = parseRouteConversationId();
+  if (routeId == null) {
+    const fallbackId = activeConvId.value ?? convs.value[0].id;
+    await router.replace({
+      name: "chat",
+      params: { conversationId: String(fallbackId) },
+    });
+    return;
+  }
+
+  const exists = convs.value.some((c) => c.id === routeId);
+  if (!exists) {
+    ElMessage.warning(`会话 #${routeId} 不存在或已删除，已切换到可用会话`);
+    await router.replace({
+      name: "chat",
+      params: { conversationId: String(convs.value[0].id) },
+    });
+    return;
+  }
+  if (activeConvId.value === routeId) return;
+  await selectConv(routeId);
 }
 
 function patchComposerTextarea() {
@@ -497,11 +548,15 @@ onMounted(async () => {
   await loadConvs();
   await loadChatModels();
   patchComposerTextarea();
-  if (activeConvId.value) {
-    activeConv.value =
-      convs.value.find((c) => c.id === activeConvId.value) ?? null;
-  }
+  await syncConversationFromRoute();
 });
+
+watch(
+  () => route.params.conversationId,
+  () => {
+    void syncConversationFromRoute();
+  }
+);
 
 watch([chatModels, activeConvId], () => patchComposerTextarea(), { flush: "post" });
 
